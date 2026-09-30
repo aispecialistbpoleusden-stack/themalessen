@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Themalessen Platform</title>
+<style>
+:root{
+  --primary:#6366f1; --primary-2:#8b5cf6; --accent:#f59e0b;
+  --ok:#10b981; --danger:#ef4444; --bg:#0a0e1a; --card:#151b2e;
+  --card2:#1e2740; --text:#e2e8f0; --muted:#94a3b8; --border:#2a3550;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:radial-gradient(1200px 600px at 20% -10%,#1e1b4b,#0a0e1a 60%);color:var(--text);min-height:100vh;overflow-x:hidden}
+button{font-family:inherit;cursor:pointer;border:none}
+input,textarea,select{font-family:inherit}
+.btn{padding:10px 16px;border-radius:10px;background:var(--card2);color:var(--text);font-weight:600;font-size:14px;transition:.15s;border:1px solid var(--border)}
+.btn:hover{transform:translateY(-1px);background:#26314f}
+.btn.primary{background:linear-gradient(135deg,var(--primary),var(--primary-2));border:none;box-shadow:0 4px 14px rgba(99,102,241,.35)}
+.btn.primary:hover{box-shadow:0 6px 20px rgba(99,102,241,.55)}
+.btn.danger{background:var(--danger);border:none}
+.btn.ghost{background:transparent;border:1px solid var(--border)}
+.btn.small{padding:6px 10px;font-size:12px}
+.btn.full{width:100%}
+.input,textarea.input,select.input{width:100%;padding:11px 14px;background:var(--card2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;outline:none;transition:.15s}
+.input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(99,102,241,.2)}
+.input.big{font-size:20px;font-weight:700;padding:14px 16px}
+textarea.input{resize:vertical;min-height:80px;line-height:1.5}
+label{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+
+/* Login */
+.login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+.login-card{width:100%;max-width:440px;background:var(--card);border:1px solid var(--border);border-radius:20px;padding:32px;box-shadow:0 30px 60px rgba(0,0,0,.5)}
+.login-card h1{font-size:28px;text-align:center;background:linear-gradient(135deg,#a5b4fc,#f0abfc);-webkit-background-clip:text;background-clip:text;color:transparent}
+.login-card .subtitle{text-align:center;color:var(--muted);margin:8px 0 24px;font-size:14px}
+.tabs{display:flex;gap:6px;background:var(--card2);padding:6px;border-radius:12px;margin-bottom:20px}
+.tab{flex:1;padding:10px;border-radius:8px;background:transparent;color:var(--muted);font-weight:600;font-size:13px}
+.tab.active{background:linear-gradient(135deg,var(--primary),var(--primary-2));color:#fff}
+.login-body{display:flex;flex-direction:column;gap:12px}
+
+/* Layout */
+.topbar{display:flex;justify-content:space-between;align-items:center;padding:14px 24px;background:rgba(21,27,46,.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.brand{font-weight:800;font-size:18px;background:linear-gradient(135deg,#a5b4fc,#f0abfc);-webkit-background-clip:text;background-clip:text;color:transparent}
+.user-info{display:flex;align-items:center;gap:12px;font-size:14px;color:var(--muted)}
+
+.main-grid{display:grid;grid-template-columns:320px 1fr;min-height:calc(100vh - 60px)}
+.sidebar{padding:20px;border-right:1px solid var(--border);background:rgba(21,27,46,.5)}
+.sidebar h2{font-size:14px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:14px}
+.theme-list{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.theme-item{padding:14px;border-radius:12px;background:var(--card2);border:1px solid var(--border);cursor:pointer;transition:.15s}
+.theme-item:hover{background:#26314f;transform:translateX(2px)}
+.theme-item.active{border-color:var(--primary);background:linear-gradient(135deg,rgba(99,102,241,.15),rgba(139,92,246,.15))}
+.theme-item .name{font-weight:700;font-size:14px;display:flex;align-items:center;gap:8px;justify-content:space-between}
+.theme-item .sub{font-size:12px;color:var(--muted);margin-top:4px}
+.pushed-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok);animation:pulse 2s infinite}
+@keyframes pulse{50%{opacity:.5}}
+
+.editor{padding:28px;max-width:900px}
+.empty-state{display:flex;align-items:center;justify-content:center;min-height:400px;color:var(--muted);font-size:15px;border:2px dashed var(--border);border-radius:16px}
+.editor-header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+.act-list{display:flex;flex-direction:column;gap:14px;margin-top:18px}
+.act-card{background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:16px;transition:.15s}
+.act-card:hover{border-color:#3d4a6b}
+.act-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.act-controls{display:flex;gap:6px}
+.badge{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;background:rgba(99,102,241,.2);color:#a5b4fc}
+.add-bar{display:flex;flex-wrap:wrap;gap:8px;padding:16px;background:var(--card2);border-radius:14px;border:1px dashed var(--border);margin-top:16px}
+.add-bar .btn{font-size:12px}
+
+/* Student */
+.student-wrap{max-width:1100px;margin:0 auto;padding:24px;display:flex;flex-direction:column;gap:20px}
+.hero{background:linear-gradient(135deg,rgba(99,102,241,.25),rgba(139,92,246,.25));border:1px solid var(--border);border-radius:20px;padding:28px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-50%;right:-10%;width:400px;height:400px;background:radial-gradient(circle,rgba(168,85,247,.25),transparent 70%);pointer-events:none}
+.hero h1{font-size:32px;margin-bottom:8px;position:relative}
+.hero .meta{display:flex;gap:10px;flex-wrap:wrap;position:relative}
+.chip{padding:6px 12px;background:rgba(255,255,255,.08);border-radius:20px;font-size:12px;font-weight:600;border:1px solid rgba(255,255,255,.1)}
+.chip.objective{background:rgba(245,158,11,.15);color:#fbbf24;border-color:rgba(245,158,11,.3)}
+.student-acts{display:flex;flex-direction:column;gap:20px}
+.student-act{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:22px;animation:slideUp .4s ease both}
+@keyframes slideUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.student-act h3{font-size:19px;margin-bottom:12px;display:flex;align-items:center;gap:10px}
+.student-act .icon{font-size:22px}
+.student-act p{line-height:1.7;color:#cbd5e1}
+.student-act img{max-width:100%;border-radius:12px;margin-top:8px}
+.student-act iframe{width:100%;aspect-ratio:16/9;border:none;border-radius:12px;margin-top:8px;background:#000}
+
+/* Live feed */
+.feed{display:flex;flex-direction:column;gap:10px;margin-top:14px;max-height:340px;overflow-y:auto;padding:4px}
+.feed-item{background:var(--card2);padding:12px 14px;border-radius:12px;border-left:3px solid var(--primary);animation:slideUp .3s ease both}
+.feed-item .who{font-size:11px;color:#a5b4fc;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.feed-item .msg{margin-top:6px;line-height:1.5;font-size:14px;white-space:pre-wrap;word-break:break-word}
+.answer-row{display:flex;gap:10px;margin-top:12px}
+.answer-row textarea{flex:1}
+
+/* Quiz */
+.quiz-q{background:var(--card2);padding:16px;border-radius:12px;margin-bottom:12px}
+.quiz-q .qtext{font-weight:600;margin-bottom:10px}
+.quiz-opt{display:block;padding:10px 14px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;margin:6px 0;cursor:pointer;transition:.15s}
+.quiz-opt:hover{background:rgba(99,102,241,.1);border-color:var(--primary)}
+.quiz-opt.correct{background:rgba(16,185,129,.2);border-color:var(--ok);color:#6ee7b7}
+.quiz-opt.wrong{background:rgba(239,68,68,.15);border-color:var(--danger);color:#fca5a5}
+.quiz-opt input{margin-right:10px}
+.quiz-score{margin-top:12px;padding:10px 14px;border-radius:10px;background:rgba(99,102,241,.15);font-weight:700;font-size:14px}
+
+/* Drag board / whiteboard */
+.board{position:relative;width:100%;aspect-ratio:16/10;background:linear-gradient(135deg,#1a2035,#0f1526);border-radius:14px;border:1px solid var(--border);overflow:hidden;margin-top:12px}
+.board.road{background:
+  linear-gradient(90deg,transparent 48%,#facc15 48%,#facc15 52%,transparent 52%),
+  linear-gradient(0deg,#374151 0,#374151 100%);
+}
+.drag-item{position:absolute;cursor:grab;user-select:none;display:flex;flex-direction:column;align-items:center;gap:2px;touch-action:none;transition:transform .05s}
+.drag-item:active{cursor:grabbing;transform:scale(1.08);z-index:10}
+.drag-item svg{width:44px;height:60px;filter:drop-shadow(0 4px 8px rgba(0,0,0,.5))}
+.drag-item .label{font-size:10px;font-weight:700;background:rgba(0,0,0,.6);padding:2px 6px;border-radius:6px;pointer-events:none}
+.palette{display:flex;flex-wrap:wrap;gap:10px;padding:10px;background:var(--card2);border-radius:12px;margin-top:12px}
+.palette-item{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px;border-radius:8px;cursor:pointer;transition:.15s;min-width:60px}
+.palette-item:hover{background:rgba(99,102,241,.15)}
+.palette-item svg{width:32px;height:44px}
+.palette-item span{font-size:10px;color:var(--muted)}
+canvas.whiteboard{width:100%;aspect-ratio:16/9;background:#fff;border-radius:14px;cursor:crosshair;touch-action:none;display:block}
+.wb-tools{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap}
+.color-dot{width:26px;height:26px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:.15s}
+.color-dot.active{border-color:#fff;transform:scale(1.15)}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);padding:12px 22px;border-radius:12px;background:var(--card2);border:1px solid var(--border);box-shadow:0 10px 30px rgba(0,0,0,.5);font-weight:600;font-size:14px;opacity:0;transition:.3s;z-index:9999}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+.toast.error{background:var(--danger);border-color:var(--danger)}
+.toast.success{background:var(--ok);border-color:var(--ok)}
+.toast.info{background:linear-gradient(135deg,var(--primary),var(--primary-2));border:none}
+
+@media(max-width:800px){
+  .main-grid{grid-template-columns:1fr}
+  .sidebar{border-right:none;border-bottom:1px solid var(--border)}
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, push, onValue, update, remove, get, onChildAdded, onDisconnect } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+/* ================= FIREBASE ================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyCxJTc6nhg0_s3KtxTn4aRmIkFVoXwptSI",
+  authDomain: "themalessen-d43d8.firebaseapp.com",
+  databaseURL: "https://themalessen-d43d8-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "themalessen-d43d8",
+  storageBucket: "themalessen-d43d8.firebasestorage.app",
+  messagingSenderId: "338963509852",
+  appId: "1:338963509852:web:0877c3e87a29c3e2242c99"
+};
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+/* ================= UTIL ================= */
+const $  = (s,r=document)=>r.querySelector(s);
+const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
+function h(tag, props={}, ...kids){
+  const e = document.createElement(tag);
+  for(const [k,v] of Object.entries(props)){
+    if(v===false||v==null) continue;
+    if(k==='class') e.className=v;
+    else if(k==='html') e.innerHTML=v;
+    else if(k.startsWith('on')) e.addEventListener(k.slice(2).toLowerCase(), v);
+    else if(k==='style' && typeof v==='object') Object.assign(e.style, v);
+    else e.setAttribute(k, v);
+  }
+  kids.flat().forEach(c=>{
+    if(c==null||c===false) return;
+    e.appendChild(c instanceof Node ? c : document.createTextNode(String(c)));
+  });
+  return e;
+}
+function toast(msg, type='info'){
+  const t = h('div', {class:`toast ${type}`}, msg);
+  document.body.appendChild(t);
+  requestAnimationFrame(()=>t.classList.add('show'));
+  setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),300);}, 2500);
+}
+const uid = ()=> 'x'+Math.random().toString(36).slice(2,10);
+const esc = s => String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ================= STATE ================= */
+const state = {
+  userId: (()=>{ let id=localStorage.getItem('userId'); if(!id){id='u_'+Math.random().toString(36).slice(2,10); localStorage.setItem('userId',id);} return id; })(),
+  user: JSON.parse(localStorage.getItem('user')||'null'),
+  themes: {},
+  pushedThemeId: null,
+  pushedTheme: null,
+  editingThemeId: null,
+  objectives: {}
+};
+const listeners = [];
+const track = u => listeners.push(u);
+function clearTracked(){ while(listeners.length){ try{listeners.pop()();}catch(e){} } }
+
+/* ================= DATA HELPERS ================= */
+function updateActivity(themeId, idx, patch){
+  const theme = state.themes[themeId]; if(!theme) return;
+  const acts = [...(theme.activities||[])];
+  acts[idx] = {...acts[idx], ...patch};
+  update(ref(db,'themes/'+themeId), {activities: acts});
+}
+function moveActivity(themeId, idx, dir){
+  const acts = [...(state.themes[themeId].activities||[])];
+  const j = idx+dir; if(j<0||j>=acts.length) return;
+  [acts[idx],acts[j]]=[acts[j],acts[idx]];
+  update(ref(db,'themes/'+themeId),{activities:acts});
+  renderEditor();
+}
+function removeActivity(themeId, idx){
+  if(!confirm('Activiteit verwijderen?')) return;
+  const acts = [...(state.themes[themeId].activities||[])];
+  acts.splice(idx,1);
+  update(ref(db,'themes/'+themeId),{activities:acts});
+  renderEditor();
+}
+function addActivity(themeId, type){
+  const base = {id:uid(), type, order:Date.now()};
+  if(type==='text') base.title=''; base.body='';
+  if(type==='image') base.url=''; base.caption='';
+  if(type==='youtube') base.url=''; base.caption='';
+  if(type==='iframe') base.url=''; base.title='';
+  if(type==='openq') base.question=''; base.hint='';
+  if(type==='quiz') base.questions=[];
+  if(type==='drag') base.title='Sleepopdracht'; base.items=[];
+  if(type==='whiteboard') base.title='Samen tekenen';
+  if(type==='traffic') base.question=''; base.vehicles=[];
+  const acts = [...(state.themes[themeId].activities||[]), base];
+  update(ref(db,'themes/'+themeId),{activities:acts});
+  setTimeout(renderEditor, 200);
+}
+
+/* ================= LOGIN ================= */
+function renderLogin(){
+  const wrap = h('div',{class:'login-wrap'});
+  const card = h('div',{class:'login-card'});
+  card.append(
+    h('h1',{},'📚 Themalessen'),
+    h('p',{class:'subtitle'},'Kies je rol om verder te gaan')
+  );
+  const tabs = h('div',{class:'tabs'});
+  const tabS = h('button',{class:'tab active'},'👨‍🎓 Leerling');
+  const tabT = h('button',{class:'tab'},'👩‍🏫 Docent');
+  tabs.append(tabS,tabT); card.appendChild(tabs);
+  const body = h('div',{class:'login-body'}); card.appendChild(body);
+
+  function showStudent(){
+    tabS.classList.add('active'); tabT.classList.remove('active'); body.innerHTML='';
+    const nameInput = h('input',{class:'input', placeholder:'Jouw naam', value:localStorage.getItem('studentName')||''});
+    body.append(
+      nameInput,
+      h('button',{class:'btn primary', onclick:()=>{
+        const n = nameInput.value.trim();
+        if(!n) return toast('Vul je naam in','error');
+        localStorage.setItem('studentName', n);
+        loginAs({id:state.userId, name:n, role:'leerling'});
+      }},'Deelnemen aan les')
+    );
+    setTimeout(()=>nameInput.focus(),50);
+  }
+  function showTeacher(){
+    tabT.classList.add('active'); tabS.classList.remove('active'); body.innerHTML='';
+    const pw = h('input',{class:'input', type:'password', placeholder:'Wachtwoord'});
+    body.append(
+      pw,
+      h('button',{class:'btn primary', onclick:()=>{
+        if(pw.value!=='docent') return toast('Onjuist wachtwoord','error');
+        loginAs({id:state.userId, name:'Docent', role:'docent'});
+      }},'Inloggen als docent')
+    );
+    pw.addEventListener('keydown', e=>{ if(e.key==='Enter') pw.nextSibling.click(); });
+    setTimeout(()=>pw.focus(),50);
+  }
+  tabS.onclick = showStudent;
+  tabT.onclick = showTeacher;
+  showStudent();
+
+  wrap.appendChild(card);
+  return wrap;
+}
+function loginAs(user){
+  state.user = user;
+  localStorage.setItem('user', JSON.stringify(user));
+  set(ref(db,'users/'+user.id), {name:user.name, role:user.role, lastSeen:Date.now()});
+  onDisconnect(ref(db,'users/'+user.id+'/online')).set(false);
+  set(ref(db,'users/'+user.id+'/online'), true);
+  render();
+}
+function logout(){
+  if(state.user) set(ref(db,'users/'+state.user.id+'/online'), false);
+  state.user = null; localStorage.removeItem('user'); render();
+}
+
+/* ================= TEACHER ================= */
+function renderTeacher(){
+  const wrap = h('div');
+  wrap.appendChild(h('header',{class:'topbar'},
+    h('div',{class:'brand'},'📚 Themalessen – Docent'),
+    h('div',{class:'user-info'},
+      h('span',{},'👩‍🏫 Docent'),
+      h('button',{class:'btn ghost small', onclick:logout},'Uitloggen')
+    )
+  ));
+  const main = h('div',{class:'main-grid'});
+  const sidebar = h('aside',{class:'sidebar'});
+  sidebar.append(
+    h('h2',{},'Thema\'s'),
+    h('button',{class:'btn primary full', onclick:createNewTheme},'+ Nieuw thema')
+  );
+  const themeList = h('div',{class:'theme-list', id:'theme-list'});
+  sidebar.appendChild(themeList);
+  const editor = h('section',{class:'editor', id:'editor'});
+  main.append(sidebar, editor);
+  wrap.appendChild(main);
+  setTimeout(()=>{ renderThemeList(); renderEditor(); },0);
+  return wrap;
+}
+function renderThemeList(){
+  const list = $('#theme-list'); if(!list) return;
+  list.innerHTML='';
+  const entries = Object.entries(state.themes).sort((a,b)=>(b[1].updatedAt||0)-(a[1].updatedAt||0));
+  if(!entries.length){
+    list.appendChild(h('div',{class:'sub', style:{color:'var(--muted)',fontSize:'13px',padding:'10px'}},'Nog geen thema\'s'));
+    return;
+  }
+  for(const [id,t] of entries){
+    const pushed = state.pushedThemeId===id;
+    const item = h('div',{class:'theme-item'+(state.editingThemeId===id?' active':''), onclick:()=>{ state.editingThemeId=id; renderEditor(); renderThemeList(); }},
+      h('div',{class:'name'},
+        h('span',{}, t.name||'Naamloos thema'),
+        pushed && h('span',{class:'pushed-dot', title:'Gepusht'})
+      ),
+      h('div',{class:'sub'}, (t.subject||'Geen vak') + ' • ' + ((t.activities||[]).length) + ' activiteiten')
+    );
+    list.appendChild(item);
+  }
+}
+function renderEditor(){
+  const ed = $('#editor'); if(!ed) return;
+  ed.innerHTML='';
+  const tid = state.editingThemeId;
+  if(!tid || !state.themes[tid]){
+    ed.appendChild(h('div',{class:'empty-state'},'👈 Selecteer een thema of maak een nieuw thema'));
+    return;
+  }
+  const theme = state.themes[tid];
+  const pushed = state.pushedThemeId===tid;
+
+  const head = h('div',{class:'editor-header'});
+  head.appendChild(h('div',{style:{flex:'1', minWidth:'260px'}},
+    h('label',{},'Naam van het thema'),
+    h('input',{class:'input big', value:theme.name||'', oninput:e=>update(ref(db,'themes/'+tid),{name:e.target.value, updatedAt:Date.now()})}),
+    h('label',{},'Vakgebied'),
+    h('input',{class:'input', value:theme.subject||'', placeholder:'bv. Verkeer, Biologie…', oninput:e=>update(ref(db,'themes/'+tid),{subject:e.target.value, updatedAt:Date.now()})})
+  ));
+  const actions = h('div',{style:{display:'flex',gap:'8px',alignItems:'flex-end'}});
+  if(pushed){
+    actions.appendChild(h('button',{class:'btn ghost', onclick:()=>{ set(ref(db,'settings/pushedThemeId'), null); toast('Thema niet meer gepusht','info'); }},'⏹ Stop push'));
+  } else {
+    actions.appendChild(h('button',{class:'btn primary', onclick:()=>{ set(ref(db,'settings/pushedThemeId'), tid); toast('Thema gepusht naar leerlingen!','success'); }},'🚀 Push naar leerlingen'));
+  }
+  actions.appendChild(h('button',{class:'btn danger small', onclick:async()=>{
+    if(!confirm('Thema definitief verwijderen?')) return;
+    await remove(ref(db,'themes/'+tid));
+    if(state.pushedThemeId===tid) set(ref(db,'settings/pushedThemeId'), null);
+    state.editingThemeId=null; toast('Verwijderd','info');
+  }},'Verwijder'));
+  head.appendChild(actions);
+  ed.appendChild(head);
+
+  // Doelstellingen
+  const objWrap = h('div',{style:{marginTop:'12px'}});
+  objWrap.appendChild(h('label',{},'Doelstelling'));
+  const objSelect = h('select',{class:'input', onchange:e=>{
+    if(e.target.value==='__new'){
+      const v = prompt('Nieuwe doelstelling:');
+      if(v){
+        update(ref(db,'objectives/'+uid()), {text:v});
+        update(ref(db,'themes/'+tid), {objective:v, updatedAt:Date.now()});
+      }
+      e.target.value = theme.objective||'';
+      return;
+    }
+    update(ref(db,'themes/'+tid),{objective:e.target.value, updatedAt:Date.now()});
+  }});
+  objSelect.appendChild(h('option',{value:''},'— Kies een doelstelling —'));
+  const objVals = Object.values(state.objectives||{}).map(o=>o.text).filter(Boolean);
+  const allObj = [...new Set([...objVals, theme.objective].filter(Boolean))];
+  for(const o of allObj){
+    const opt = h('option',{value:o},o);
+    if(o===theme.objective) opt.selected=true;
+    objSelect.appendChild(opt);
+  }
+  objSelect.appendChild(h('option',{value:'__new'},'➕ Nieuwe doelstelling toevoegen…'));
+  objWrap.appendChild(objSelect);
+  ed.appendChild(objWrap);
+
+  // Beschrijving
+  ed.appendChild(h('label',{},'Beschrijving van het thema'));
+  ed.appendChild(h('textarea',{class:'input', rows:4, placeholder:'Waar gaat dit thema over?', value:theme.description||'', oninput:e=>update(ref(db,'themes/'+tid),{description:e.target.value, updatedAt:Date.now()})}));
+
+  // Activiteiten
+  const list = h('div',{class:'act-list'});
+  (theme.activities||[]).forEach((a,i)=>list.appendChild(renderActivityEditor(a,i,tid)));
+  ed.appendChild(list);
+
+  // Add bar
+  const addBar = h('div',{class:'add-bar'});
+  const types = [
+    ['text','📝 Tekst'],['image','🖼️ Afbeelding'],['youtube','▶️ YouTube'],
+    ['iframe','🌐 Website'],['openq','💬 Open vraag'],['quiz','🧠 Quiz'],
+    ['drag','🖱️ Sleepopdracht'],['whiteboard','🎨 Whiteboard'],['traffic','🚦 Verkeerssituatie']
+  ];
+  for(const [t,l] of types) addBar.appendChild(h('button',{class:'btn small', onclick:()=>addActivity(tid,t)}, l));
+  ed.appendChild(addBar);
+}
+
+/* ================= ACTIVITY EDITORS ================= */
+const TYPE_LABELS = {text:'Tekst', image:'Afbeelding', youtube:'YouTube', iframe:'Website', openq:'Open vraag', quiz:'Quiz', drag:'Sleepopdracht', whiteboard:'Whiteboard', traffic:'Verkeerssituatie'};
+
+function renderActivityEditor(act, idx, tid){
+  const card = h('div',{class:'act-card'});
+  card.appendChild(h('div',{class:'act-header'},
+    h('span',{class:'badge'}, TYPE_LABELS[act.type]||act.type),
+    h('div',{class:'act-controls'},
+      h('button',{class:'btn ghost small', onclick:()=>moveActivity(tid,idx,-1)},'↑'),
+      h('button',{class:'btn ghost small', onclick:()=>moveActivity(tid,idx,1)},'↓'),
+      h('button',{class:'btn danger small', onclick:()=>removeActivity(tid,idx)},'✕')
+    )
+  ));
+  const body = h('div',{class:'act-body'});
+  const upd = patch => updateActivity(tid, idx, patch);
+
+  if(act.type==='text'){
+    body.append(
+      h('input',{class:'input', placeholder:'Kop', value:act.title||'', oninput:e=>upd({title:e.target.value})}),
+      h('textarea',{class:'input', placeholder:'Tekst…', rows:4, style:{marginTop:'8px'}, oninput:e=>upd({body:e.target.value})}, act.body||'')
+    );
+  }
+  else if(act.type==='image'){
+    body.append(
+      h('input',{class:'input', placeholder:'https://afbeelding.jpg', value:act.url||'', oninput:e=>upd({url:e.target.value})}),
+      h('input',{class:'input', placeholder:'Onderschrift', style:{marginTop:'8px'}, value:act.caption||'', oninput:e=>upd({caption:e.target.value})})
+    );
+  }
+  else if(act.type==='youtube'){
+    body.append(
+      h('input',{class:'input', placeholder:'YouTube link', value:act.url||'', oninput:e=>upd({url:e.target.value})}),
+      h('input',{class:'input', placeholder:'Omschrijving', style:{marginTop:'8px'}, value:act.caption||'', oninput:e=>upd({caption:e.target.value})})
+    );
+  }
+  else if(act.type==='iframe'){
+    body.append(
+      h('input',{class:'input', placeholder:'Titel', value:act.title||'', oninput:e=>upd({title:e.target.value})}),
+      h('input',{class:'input', placeholder:'https://website.nl', style:{marginTop:'8px'}, value:act.url||'', oninput:e=>upd({url:e.target.value})})
+    );
+  }
+  else if(act.type==='openq'){
+    body.append(
+      h('input',{class:'input', placeholder:'Vraag', value:act.question||'', oninput:e=>upd({question:e.target.value})}),
+      h('input',{class:'input', placeholder:'Hint (optioneel)', style:{marginTop:'8px'}, value:act.hint||'', oninput:e=>upd({hint:e.target.value})})
+    );
+  }
+  else if(act.type==='quiz'){
+    const qs = act.questions||[];
+    const wrap = h('div');
+    qs.forEach((q,qi)=>{
+      const qc = h('div',{class:'quiz-q'});
+      qc.append(
+        h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',gap:'8px'}},
+          h('strong',{},'Vraag '+(qi+1)),
+          h('button',{class:'btn danger small', onclick:()=>{const n=[...qs]; n.splice(qi,1); upd({questions:n}); renderEditor();}},'✕')
+        ),
+        h('select',{class:'input', style:{marginTop:'8px'}, onchange:e=>{const n=[...qs]; n[qi]={...q, qtype:e.target.value}; upd({questions:n}); renderEditor();}},
+          ...[['open','Open vraag'],['mc','Meerkeuze'],['auto','Kort antwoord (auto-correctie)']].map(([v,l])=>{
+            const o=h('option',{value:v},l); if(q.qtype===v)o.selected=true; return o;
+          })
+        ),
+        h('input',{class:'input', placeholder:'Vraag', style:{marginTop:'8px'}, value:q.q||'', oninput:e=>{const n=[...qs]; n[qi]={...q, q:e.target.value}; upd({questions:n});}})
+      );
+      if(q.qtype==='mc'){
+        const opts = q.options||['','','',''];
+        opts.forEach((o,oi)=>{
+          qc.appendChild(h('div',{style:{display:'flex',gap:'8px',marginTop:'6px',alignItems:'center'}},
+            h('input',{type:'radio', name:'mc_'+act.id+'_'+qi, checked:q.correct===oi, onchange:()=>{const n=[...qs]; n[qi]={...q, correct:oi}; upd({questions:n});}}),
+            h('input',{class:'input', value:o, placeholder:'Optie '+(oi+1), oninput:e=>{const nn=[...opts]; nn[oi]=e.target.value; const n=[...qs]; n[qi]={...q, options:nn}; upd({questions:n});}})
+          ));
+        });
+        qc.appendChild(h('button',{class:'btn ghost small', style:{marginTop:'8px'}, onclick:()=>{const n=[...qs]; n[qi]={...q, options:[...(q.options||[]),'']}; upd({questions:n}); renderEditor();}},'+ Optie'));
+      } else if(q.qtype==='auto'){
+        qc.appendChild(h('input',{class:'input', placeholder:'Correct antwoord (gescheiden door | voor meerdere)', style:{marginTop:'8px'}, value:q.answer||'', oninput:e=>{const n=[...qs]; n[qi]={...q, answer:e.target.value}; upd({questions:n});}}));
+      }
+      wrap.appendChild(qc);
+    });
+    wrap.appendChild(h('button',{class:'btn primary small', onclick:()=>upd({questions:[...qs,{qtype:'open', q:''}]})},'+ Vraag toevoegen'));
+    body.appendChild(wrap);
+  }
+  else if(act.type==='drag'){
+    const items = act.items||[];
+    body.append(
+      h('input',{class:'input', placeholder:'Titel van de sleepopdracht', value:act.title||'', oninput:e=>upd({title:e.target.value})}),
+      h('label',{},'Items'),
+      ...items.map((it,ii)=>h('div',{style:{display:'flex',gap:'8px',marginBottom:'6px'}},
+        h('input',{class:'input', value:it, oninput:e=>{const n=[...items]; n[ii]=e.target.value; upd({items:n});}}),
+        h('button',{class:'btn danger small', onclick:()=>{const n=[...items]; n.splice(ii,1); upd({items:n}); renderEditor();}},'✕')
+      )),
+      h('button',{class:'btn ghost small', onclick:()=>upd({items:[...items,'Item '+(items.length+1)]})},'+ Item')
+    );
+  }
+  else if(act.type==='whiteboard'){
+    body.appendChild(h('input',{class:'input', placeholder:'Titel', value:act.title||'', oninput:e=>upd({title:e.target.value})}));
+    body.appendChild(h('p',{style:{color:'var(--muted)',fontSize:'13px',marginTop:'8px'}},'Een gedeeld whiteboard waarop alle leerlingen tegelijk kunnen tekenen.'));
+  }
+  else if(act.type==='traffic'){
+    const veh = act.vehicles||[];
+    body.append(
+      h('input',{class:'input', placeholder:'Opdracht (bv. "Maak een kruispunt met voorrangssituatie")', value:act.question||'', oninput:e=>upd({question:e.target.value})}),
+      h('label',{},'Beschikbare voertuigen / elementen'),
+      h('div',{style:{display:'flex',flexWrap:'wrap',gap:'8px'}},
+        ...Object.entries(VEHICLES).map(([k,v])=>h('label',{style:{display:'flex',alignItems:'center',gap:'6px',padding:'6px 10px',background:'var(--card2)',borderRadius:'8px',cursor:'pointer'}},
+          h('input',{type:'checkbox', checked:veh.includes(k), onchange:e=>{
+            const n = e.target.checked ? [...veh,k] : veh.filter(x=>x!==k);
+            upd({vehicles:n});
+          }}),
+          v.label
+        ))
+      )
+    );
+  }
+  card.appendChild(body);
+  return card;
+}
+
+/* ================= STUDENT ================= */
+let pushedUnsub = null;
+function renderStudent(){
+  const root = $('#app');
+  root.innerHTML = '';
+  if(!state.user) return render();
+
+  const wrap = h('div',{class:'student-wrap'});
+
+  wrap.appendChild(h('header',{class:'topbar', style:{borderRadius:'16px', marginBottom:'0'}},
+    h('div',{class:'brand'},'📚 Themalessen – Leerling'),
+    h('div',{class:'user-info'},
+      h('span',{},'👨‍🎓 '+state.user.name),
+      h('button',{class:'btn ghost small', onclick:logout},'Uitloggen')
+    )
+  ));
+
+  if(!state.pushedThemeId || !state.pushedTheme){
+    wrap.appendChild(h('div',{class:'empty-state', style:{marginTop:'20px'}},'⏳ Wachten tot de docent een thema start…'));
+    root.appendChild(wrap);
+    return;
+  }
+
+  const t = state.pushedTheme;
+  const hero = h('div',{class:'hero'},
+    h('h1',{}, t.name||'Thema'),
+    h('div',{class:'meta'},
+      t.subject && h('span',{class:'chip'},'📘 '+t.subject),
+      t.objective && h('span',{class:'chip objective'},'🎯 '+t.objective)
+    )
+  );
+  if(t.description) hero.appendChild(h('p',{style:{marginTop:'14px',color:'#cbd5e1',lineHeight:'1.7',position:'relative'}}, t.description));
+  wrap.appendChild(hero);
+
+  // Listener voor antwoorden/whiteboard per activiteit
+  const actsWrap = h('div',{class:'student-acts'});
+  (t.activities||[]).forEach((a,i)=>{
+    const node = renderStudentActivity(a, state.pushedThemeId, i);
+    if(node) actsWrap.appendChild(node);
+  });
+  wrap.appendChild(actsWrap);
+  root.appendChild(wrap);
+}
+
+/* ================= ACTIVITY RENDERERS (STUDENT) ================= */
+function renderStudentActivity(act, tid, idx){
+  if(act.type==='text'){
+    if(!act.title && !act.body) return null;
+    return h('div',{class:'student-act'},
+      act.title && h('h3',{},'📝 '+act.title),
+      act.body && h('p',{}, act.body)
+    );
+  }
+  if(act.type==='image'){
+    if(!act.url) return null;
+    return h('div',{class:'student-act'},
+      h('h3',{},'🖼️ Afbeelding'),
+      h('img',{src:act.url, alt:act.caption||''}),
+      act.caption && h('p',{style:{marginTop:'8px',color:'var(--muted)',fontSize:'13px'}}, act.caption)
+    );
+  }
+  if(act.type==='youtube'){
+    if(!act.url) return null;
+    const m = act.url.match(/(?:v=|youtu\.be\/|embed\/)([\w-]{11})/);
+    const src = m ? `https://www.youtube.com/embed/${m[1]}` : act.url;
+    return h('div',{class:'student-act'},
+      h('h3',{},'▶️ Video'),
+      h('iframe',{src, allow:'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture', allowfullscreen:'true'}),
+      act.caption && h('p',{style:{marginTop:'8px',color:'var(--muted)',fontSize:'13px'}}, act.caption)
+    );
+  }
+  if(act.type==='iframe'){
+    if(!act.url) return null;
+    return h('div',{class:'student-act'},
+      h('h3',{},'🌐 '+(act.title||'Website')),
+      h('iframe',{src:act.url, sandbox:'allow-scripts allow-same-origin allow-forms allow-popups'})
+    );
+  }
+  if(act.type==='openq'){
+    const card = h('div',{class:'student-act'});
+    card.append(
+      h('h3',{},'💬 '+(act.question||'Open vraag')),
+      act.hint && h('p',{style:{color:'var(--muted)',fontSize:'13px',marginBottom:'8px'}}, act.hint)
+    );
+    const input = h('textarea',{class:'input', placeholder:'Typ hier je antwoord…', rows:2});
+    const feed = h('div',{class:'feed'});
+    const sub = h('button',{class:'btn primary', onclick:()=>{
+      const v = input.value.trim(); if(!v) return;
+      push(ref(db,`responses/${tid}/${act.id}/answers`), {name:state.user.name, text:v, ts:Date.now()});
+      input.value='';
+    }},'Verstuur');
+    card.appendChild(h('div',{class:'answer-row'}, input, sub));
+    card.appendChild(feed);
+
+    // live feed (laatste 40)
+    const answersRef = ref(db,`responses/${tid}/${act.id}/answers`);
+    const unsub = onValue(answersRef, snap=>{
+      const data = snap.val()||{};
+      const arr = Object.values(data).sort((a,b)=>a.ts-b.ts).slice(-40);
+      feed.innerHTML='';
+      arr.forEach(a=>{
+        feed.appendChild(h('div',{class:'feed-item'},
+          h('div',{class:'who'}, a.name),
+          h('div',{class:'msg'}, a.text)
+        ));
+      });
+      feed.scrollTop = feed.scrollHeight;
+    });
+    track(unsub);
+    return card;
+  }
+  if(act.type==='quiz'){
+    const card = h('div',{class:'student-act'});
+    card.appendChild(h('h3',{},'🧠 Quiz'));
+    const qs = act.questions||[];
+    if(!qs.length) card.appendChild(h('p',{style:{color:'var(--muted)'}},'Nog geen vragen.'));
+    const myRef = ref(db,`responses/${tid}/${act.id}/${state.userId}`);
+    let myAnswers = {};
+    const scoreEl = h('div',{class:'quiz-score'},'');
+    qs.forEach((q,qi)=>{
+      const qc = h('div',{class:'quiz-q'});
+      qc.appendChild(h('div',{class:'qtext'}, (qi+1)+'. '+q.q));
+      if(q.qtype==='mc'){
+        (q.options||[]).forEach((opt,oi)=>{
+          const row = h('label',{class:'quiz-opt'},
+            h('input',{type:'radio', name:'q'+act.id+'_'+qi, onchange:()=>{
+              update(myRef, {['q'+qi]: oi});
+              // feedback tonen
+              $$('.quiz-opt', qc).forEach((el,j)=>{
+                el.classList.remove('correct','wrong');
+                if(j===q.correct) el.classList.add('correct');
+                else if(j===oi) el.classList.add('wrong');
+              });
+              checkScore();
+            }}),
+            opt
+          );
+          qc.appendChild(row);
+        });
+      } else if(q.qtype==='auto'){
+        const inp = h('input',{class:'input', placeholder:'Jouw antwoord', oninput:e=>{
+          update(myRef, {['q'+qi]: e.target.value});
+          checkScore();
+        }});
+        qc.appendChild(inp);
+      } else {
+        const ta = h('textarea',{class:'input', rows:2, placeholder:'Jouw antwoord…', oninput:e=>{
+          clearTimeout(ta._t); ta._t = setTimeout(()=>update(myRef, {['q'+qi]: e.target.value}), 400);
+        }});
+        qc.appendChild(ta);
+      }
+      card.appendChild(qc);
+    });
+    card.appendChild(scoreEl);
+
+    function checkScore(){
+      let correct=0, auto=0;
+      qs.forEach((q,qi)=>{
+        const ans = myAnswers['q'+qi];
+        if(q.qtype==='mc'){ auto++; if(ans===q.correct) correct++; }
+        else if(q.qtype==='auto'){
+          auto++;
+          const valid = String(q.answer||'').split('|').map(s=>s.trim().toLowerCase());
+          if(valid.includes(String(ans||'').trim().toLowerCase())) correct++;
+        }
+      });
+      if(auto) scoreEl.textContent = `✅ Score: ${correct} / ${auto} (auto-gecorrigeerde vragen)`;
+      else scoreEl.textContent='';
+    }
+
+    const unsub = onValue(myRef, snap=>{ myAnswers = snap.val()||{}; checkScore(); });
+    track(unsub);
+    return card;
+  }
+  if(act.type==='drag'){
+    return renderDragBoard(act, tid, false);
+  }
+  if(act.type==='traffic'){
+    return renderTrafficBoard(act, tid);
+  }
+  if(act.type==='whiteboard'){
+    return renderWhiteboard(act, tid);
+  }
+  return null;
+}
+
+/* ================= DRAG BOARD ================= */
+function renderDragBoard(act, tid, isTraffic){
+  const card = h('div',{class:'student-act'});
+  card.appendChild(h('h3',{},'🖱️ '+(act.title||'Sleepopdracht')));
+  const board = h('div',{class:'board'+(isTraffic?' road':'')});
+  const itemsRef = ref(db,`responses/${tid}/${act.id}/positions`);
+  const items = act.items||[];
+  // initiële posities
+  items.forEach((label,i)=>{
+    const x = 0.1 + (i%4)*0.2;
+    const y = 0.15 + Math.floor(i/4)*0.25;
+    const el = h('div',{class:'drag-item', dataset:{key:'item'+i}},
+      h('div',{class:'label'}, label),
+      h('div',{style:{width:'40px',height:'40px',borderRadius:'10px',background:'linear-gradient(135deg,#6366f1,#8b5cf6)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'22px'}},'📦')
+    );
+    el.style.left = (x*100)+'%'; el.style.top = (y*100)+'%';
+    board.appendChild(el);
+  });
+  card.appendChild(board);
+
+  function bindDrag(el, key){
+    let dragging=false, ox=0, oy=0;
+    el.addEventListener('pointerdown', e=>{
+      dragging=true; el.setPointerCapture(e.pointerId);
+      const r = el.getBoundingClientRect(); ox = e.clientX-r.left; oy = e.clientY-r.top;
+    });
+    el.addEventListener('pointermove', e=>{
+      if(!dragging) return;
+      const br = board.getBoundingClientRect();
+      let x = (e.clientX-br.left-ox)/br.width;
+      let y = (e.clientY-br.top-oy)/br.height;
+      x = Math.max(0,Math.min(1,x)); y = Math.max(0,Math.min(1,y));
+      el.style.left = (x*100)+'%'; el.style.top = (y*100)+'%';
+      clearTimeout(el._t);
+      el._t = setTimeout(()=>update(itemsRef, {[key]:{x,y}}), 60);
+    });
+    el.addEventListener('pointerup', e=>{ dragging=false; });
+    el.addEventListener('pointercancel', ()=>{ dragging=false; });
+  }
+
+  $$('.drag-item', board).forEach((el,i)=>bindDrag(el,'item'+i));
+
+  const unsub = onValue(itemsRef, snap=>{
+    const data = snap.val()||{};
+    $$('.drag-item', board).forEach((el,i)=>{
+      const p = data['item'+i]; if(!p) return;
+      const dragging = el.matches(':active');
+      if(dragging) return;
+      el.style.left = (p.x*100)+'%'; el.style.top = (p.y*100)+'%';
+    });
+  });
+  track(unsub);
+  return card;
+}
+
+/* ================= TRAFFIC BOARD ================= */
+const VEHICLES = {
+  car: {label:'Auto', svg:`<svg viewBox="0 0 40 70"><rect x="4" y="4" width="32" height="62" rx="8" fill="#3b82f6"/><rect x="9" y="12" width="22" height="14" rx="3" fill="#bfdbfe"/><rect x="9" y="44" width="22" height="14" rx="3" fill="#bfdbfe"/></svg>`},
+  truck: {label:'Vrachtwagen', svg:`<svg viewBox="0 0 44 80"><rect x="4" y="4" width="36" height="72" rx="4" fill="#dc2626"/><rect x="9" y="10" width="26" height="16" rx="2" fill="#fecaca"/></svg>`},
+  bus: {label:'Bus', svg:`<svg viewBox="0 0 44 90"><rect x="4" y="4" width="36" height="82" rx="6" fill="#f59e0b"/><rect x="9" y="12" width="26" height="18" fill="#fef3c7"/></svg>`},
+  bike: {label:'Fietser', svg:`<svg viewBox="0 0 30 60"><circle cx="15" cy="15" r="6" fill="#111"/><circle cx="15" cy="45" r="6" fill="#111"/><rect x="13" y="18" width="4" height="24" fill="#10b981"/></svg>`},
+  ped: {label:'Voetganger', svg:`<svg viewBox="0 0 24 60"><circle cx="12" cy="10" r="6" fill="#fbbf24"/><rect x="9" y="18" width="6" height="24" fill="#fbbf24"/><rect x="9" y="42" width="2" height="14" fill="#fbbf24"/><rect x="13" y="42" width="2" height="14" fill="#fbbf24"/></svg>`},
+  light: {label:'Verkeerslicht', svg:`<svg viewBox="0 0 30 60"><rect x="5" y="4" width="20" height="52" rx="6" fill="#111"/><circle cx="15" cy="16" r="5" fill="#ef4444"/><circle cx="15" cy="30" r="5" fill="#f59e0b"/><circle cx="15" cy="44" r="5" fill="#10b981"/></svg>`},
+  sign: {label:'Verkeersbord', svg:`<svg viewBox="0 0 40 40"><polygon points="20,3 37,35 3,35" fill="#fff" stroke="#dc2626" stroke-width="3"/></svg>`}
+};
+function renderTrafficBoard(act, tid){
+  const card = h('div',{class:'student-act'});
+  card.appendChild(h('h3',{},'🚦 Verkeerssituatie'));
+  if(act.question) card.appendChild(h('p',{style:{marginBottom:'8px'}},act.question));
+  const board = h('div',{class:'board road'});
+  card.appendChild(board);
+  const palette = h('div',{class:'palette'});
+  card.appendChild(palette);
+
+  const itemsRef = ref(db,`responses/${tid}/${act.id}/items`);
+
+  (act.vehicles||[]).forEach(k=>{
+    const v = VEHICLES[k]; if(!v) return;
+    const btn = h('div',{class:'palette-item', html:`${v.svg}<span>${v.label}</span>`, onclick:()=>{
+      const key = uid();
+      update(itemsRef, {[key]:{type:k, x:0.5, y:0.5, by:state.user.name}});
+    }});
+    palette.appendChild(btn);
+  });
+
+  const nodeMap = {};
+  const unsub = onValue(itemsRef, snap=>{
+    const data = snap.val()||{};
+    // verwijder verdwenen
+    Object.keys(nodeMap).forEach(k=>{ if(!data[k]){ nodeMap[k].remove(); delete nodeMap[k]; }});
+    Object.entries(data).forEach(([key,it])=>{
+      if(!nodeMap[key]){
+        const v = VEHICLES[it.type]||{label:'?', svg:''};
+        const el = h('div',{class:'drag-item', html:`${v.svg}<div class="label">${esc(it.by||'')}</div>`});
+        el.dataset.key = key;
+        board.appendChild(el);
+        bindTrafficDrag(el, key, itemsRef, board);
+        nodeMap[key] = el;
+      }
+      const el = nodeMap[key];
+      if(!el.matches(':active')){
+        el.style.left = (it.x*100)+'%'; el.style.top = (it.y*100)+'%';
+      }
+    });
+  });
+  track(unsub);
+  return card;
+}
+function bindTrafficDrag(el, key, itemsRef, board){
+  let dragging=false, ox=0, oy=0;
+  el.addEventListener('pointerdown', e=>{dragging=true; el.setPointerCapture(e.pointerId); const r=el.getBoundingClientRect(); ox=e.clientX-r.left; oy=e.clientY-r.top;});
+  el.addEventListener('pointermove', e=>{
+    if(!dragging) return;
+    const br = board.getBoundingClientRect();
+    let x=(e.clientX-br.left-ox)/br.width, y=(e.clientY-br.top-oy)/br.height;
+    x=Math.max(0,Math.min(1,x)); y=Math.max(0,Math.min(1,y));
+    el.style.left=(x*100)+'%'; el.style.top=(y*100)+'%';
+    clearTimeout(el._t);
+    el._t = setTimeout(()=>update(itemsRef, {[key+'/x']:x, [key+'/y']:y}), 60);
+  });
+  el.addEventListener('pointerup', ()=>dragging=false);
+  el.addEventListener('pointercancel', ()=>dragging=false);
+}
+
+/* ================= WHITEBOARD ================= */
+function renderWhiteboard(act, tid){
+  const card = h('div',{class:'student-act'});
+  card.appendChild(h('h3',{},'🎨 '+(act.title||'Samen tekenen')));
+  const canvas = h('canvas',{class:'whiteboard'});
+  card.appendChild(canvas);
+  const tools = h('div',{class:'wb-tools'});
+  card.appendChild(tools);
+  const colors = ['#111827','#ef4444','#3b82f6','#10b981','#f59e0b'];
+  let color = colors[0];
+  colors.forEach((c,i)=>{
+    const dot = h('div',{class:'color-dot'+(i===0?' active':''), style:{background:c}, onclick:()=>{
+      color = c; $$('.color-dot', tools).forEach((d,j)=>d.classList.toggle('active',j===i));
+    }});
+    tools.appendChild(dot);
+  });
+  tools.appendChild(h('button',{class:'btn ghost small', onclick:()=>{
+    if(confirm('Whiteboard wissen voor iedereen?')) remove(ref(db,`responses/${tid}/${act.id}/strokes`));
+  }},'🧽 Wissen'));
+
+  const ctx = canvas.getContext('2d');
+  function resize(){
+    const r = canvas.getBoundingClientRect();
+    const img = ctx.getImageData(0,0,canvas.width||1,canvas.height||1);
+    canvas.width = r.width; canvas.height = r.height;
+    ctx.fillStyle='#fff'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.putImageData(img,0,0);
+  }
+  setTimeout(()=>{ canvas.width = canvas.clientWidth; canvas.height = canvas.clientHeight; ctx.fillStyle='#fff'; ctx.fillRect(0,0,canvas.width,canvas.height); },0);
+
+  function draw(s){
+    ctx.strokeStyle = s.color; ctx.lineWidth = s.w*canvas.width; ctx.lineCap='round';
+    ctx.beginPath();
+    ctx.moveTo(s.x1*canvas.width, s.y1*canvas.height);
+    ctx.lineTo(s.x2*canvas.width, s.y2*canvas.height);
+    ctx.stroke();
+  }
+
+  const strokesRef = ref(db,`responses/${tid}/${act.id}/strokes`);
+  const unsub = onChildAdded(strokesRef, snap=>{ draw(snap.val()); });
+  track(unsub);
+
+  let drawing=false, last=null;
+  function pos(e){
+    const r = canvas.getBoundingClientRect();
+    return {x:(e.clientX-r.left)/r.width, y:(e.clientY-r.top)/r.height};
+  }
+  canvas.addEventListener('pointerdown', e=>{ drawing=true; last=pos(e); canvas.setPointerCapture(e.pointerId); });
+  canvas.addEventListener('pointermove', e=>{
+    if(!drawing) return;
+    const p = pos(e);
+    const s = {x1:last.x, y1:last.y, x2:p.x, y2:p.y, color, w:0.005};
+    draw(s); push(strokesRef, s); last = p;
+  });
+  canvas.addEventListener('pointerup', ()=>drawing=false);
+  canvas.addEventListener('pointercancel', ()=>drawing=false);
+  return card;
+}
+
+/* ================= TEACHER LISTENERS ================= */
+let teacherThemeUnsub = null;
+let pushedIdUnsub = null;
+
+/* ================= MAIN RENDER ================= */
+function render(){
+  clearTracked();
+  const root = $('#app');
+  root.innerHTML = '';
+  if(!state.user){ root.appendChild(renderLogin()); return; }
+  if(state.user.role==='docent'){ root.appendChild(renderTeacher()); setupTeacherListeners(); }
+  else { renderStudent(); setupStudentListeners(); }
+}
+
+function setupTeacherListeners(){
+  onValue(ref(db,'themes'), snap=>{
+    state.themes = snap.val()||{};
+    renderThemeList();
+    // Als er niets geselecteerd is, kies niets
+  });
+  onValue(ref(db,'settings/pushedThemeId'), snap=>{
+    state.pushedThemeId = snap.val();
+    renderThemeList();
+  });
+  onValue(ref(db,'objectives'), snap=>{
+    state.objectives = snap.val()||{};
+  });
+}
+
+function setupStudentListeners(){
+  if(pushedIdUnsub) pushedIdUnsub();
+  pushedIdUnsub = onValue(ref(db,'settings/pushedThemeId'), snap=>{
+    const newId = snap.val();
+    if(newId === state.pushedThemeId) return;
+    state.pushedThemeId = newId;
+    if(pushedUnsub){ pushedUnsub(); pushedUnsub=null; }
+    if(newId){
+      pushedUnsub = onValue(ref(db,'themes/'+newId), s2=>{
+        state.pushedTheme = s2.val();
+        // Alleen opnieuw renderen als de structuur echt verandert
+        const sig = JSON.stringify(Object.keys((state.pushedTheme?.activities||[]).reduce((a,x)=>(a[x.id]=x.type,a),{})));
+        if(sig !== state._lastSig){
+          state._lastSig = sig;
+          renderStudent();
+          setupStudentListeners();
+        }
+      });
+      toast('🎉 Nieuwe les gestart!','success');
+    } else {
+      state.pushedTheme = null;
+      state._lastSig = null;
+      renderStudent();
+    }
+  });
+}
+
+/* ================= BOOT ================= */
+render();
+</script>
+</body>
+</html>
