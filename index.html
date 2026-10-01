@@ -452,6 +452,7 @@ function updateActivity(themeId, idx, patch){
   const theme = state.themes[themeId]; if(!theme) return;
   const acts = [...(theme.activities||[])];
   acts[idx] = {...acts[idx], ...patch};
+  theme.activities = acts; // lokale state direct syncen zodat een directe renderEditor() de nieuwe data ziet
   update(ref(db,'themes/'+themeId), {activities: acts, updatedAt:Date.now()});
 }
 function moveActivity(themeId, idx, dir){
@@ -465,6 +466,7 @@ function moveActivity(themeId, idx, dir){
   }
   if(j < 0 || j >= acts.length) return;
   [acts[idx],acts[j]]=[acts[j],acts[idx]];
+  state.themes[themeId].activities = acts;
   update(ref(db,'themes/'+themeId),{activities:acts, updatedAt:Date.now()});
   renderEditor();
 }
@@ -472,6 +474,7 @@ function removeActivity(themeId, idx){
   if(!confirm('Activiteit verwijderen?')) return;
   const acts = [...(state.themes[themeId].activities||[])];
   acts.splice(idx,1);
+  state.themes[themeId].activities = acts;
   update(ref(db,'themes/'+themeId),{activities:acts, updatedAt:Date.now()});
   renderEditor();
 }
@@ -497,6 +500,7 @@ function addActivity(themeId, type, subject=''){
     base.feedPublic = false;
   }
   const acts = [...(state.themes[themeId].activities||[]), base];
+  state.themes[themeId].activities = acts;
   update(ref(db,'themes/'+themeId),{activities:acts, updatedAt:Date.now()});
   setTimeout(renderEditor, 200);
 }
@@ -1239,33 +1243,51 @@ function renderActivityEditor(act, idx, tid, themeSubjects=[]){
       qc.append(
         h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',gap:'8px'}},
           h('strong',{},'Vraag '+(qi+1)),
-          h('button',{class:'btn danger small', onclick:()=>{const n=[...qs]; n.splice(qi,1); upd({questions:n}); renderEditor();}},'✕')
+          h('button',{class:'btn danger small', onclick:()=>{
+            const n=[...qs]; n.splice(qi,1); upd({questions:n}); renderEditor();
+          }},'✕')
         ),
-        h('select',{class:'input', style:{marginTop:'8px'}, onchange:e=>{const n=[...qs]; n[qi]={...q, qtype:e.target.value}; upd({questions:n}); renderEditor();}},
+        h('select',{class:'input', style:{marginTop:'8px'}, onchange:e=>{
+          const n=[...qs]; n[qi]={...q, qtype:e.target.value}; upd({questions:n}); renderEditor();
+        }},
           ...[['open','Open vraag'],['mc','Meerkeuze'],['auto','Kort antwoord (auto-correctie)']].map(([v,l])=>{
             const o=h('option',{value:v},l); if(q.qtype===v)o.selected=true; return o;
           })
         ),
-        h('input',{class:'input', placeholder:'Vraag', style:{marginTop:'8px'}, value:q.q||'', oninput:e=>{const n=[...qs]; n[qi]={...q, q:e.target.value}; upd({questions:n});}})
+        h('input',{class:'input', placeholder:'Vraag', style:{marginTop:'8px'}, value:q.q||'', oninput:e=>{
+          const n=[...qs]; n[qi]={...q, q:e.target.value}; upd({questions:n});
+        }})
       );
       if(q.qtype==='mc'){
         const opts = q.options||['','','',''];
         opts.forEach((o,oi)=>{
           qc.appendChild(h('div',{style:{display:'flex',gap:'8px',marginTop:'6px',alignItems:'center'}},
-            h('input',{type:'radio', name:'mc_'+act.id+'_'+qi, checked:q.correct===oi, onchange:()=>{const n=[...qs]; n[qi]={...q, correct:oi}; upd({questions:n});}}),
-            h('input',{class:'input', value:o, placeholder:'Optie '+(oi+1), oninput:e=>{const nn=[...opts]; nn[oi]=e.target.value; const n=[...qs]; n[qi]={...q, options:nn}; upd({questions:n});}})
+            h('input',{type:'radio', name:'mc_'+act.id+'_'+qi, checked:q.correct===oi, onchange:()=>{
+              const n=[...qs]; n[qi]={...q, correct:oi}; upd({questions:n});
+            }}),
+            h('input',{class:'input', value:o, placeholder:'Optie '+(oi+1), oninput:e=>{
+              const nn=[...opts]; nn[oi]=e.target.value; const n=[...qs]; n[qi]={...q, options:nn}; upd({questions:n});
+            }})
           ));
         });
-        qc.appendChild(h('button',{class:'btn ghost small', style:{marginTop:'8px'}, onclick:()=>{const n=[...qs]; n[qi]={...q, options:[...(q.options||[]),'']}; upd({questions:n}); renderEditor();}},'+ Optie'));
+        qc.appendChild(h('button',{class:'btn ghost small', style:{marginTop:'8px'}, onclick:()=>{
+          const n=[...qs]; n[qi]={...q, options:[...(q.options||[]),'']}; upd({questions:n}); renderEditor();
+        }},'+ Optie'));
       } else if(q.qtype==='auto'){
-        qc.appendChild(h('input',{class:'input', placeholder:'Correct antwoord (| voor meerdere)', style:{marginTop:'8px'}, value:q.answer||'', oninput:e=>{const n=[...qs]; n[qi]={...q, answer:e.target.value}; upd({questions:n});}}));
+        qc.appendChild(h('input',{class:'input', placeholder:'Correct antwoord (| voor meerdere)', style:{marginTop:'8px'}, value:q.answer||'', oninput:e=>{
+          const n=[...qs]; n[qi]={...q, answer:e.target.value}; upd({questions:n});
+        }}));
       }
       wrap.appendChild(qc);
     });
-    wrap.appendChild(h('button',{class:'btn primary small', onclick:()=>upd({questions:[...qs,{qtype:'open', q:''}]})},'+ Vraag toevoegen'));
+    wrap.appendChild(h('button',{class:'btn primary small', onclick:()=>{
+      upd({questions:[...qs,{qtype:'open', q:''}]});
+      renderEditor();
+    }},'+ Vraag toevoegen'));
     body.appendChild(wrap);
   }
   else if(act.type==='beroepsproduct'){
+    /* ---------- VARIANT ---------- */
     body.appendChild(h('label',{},'Variant van het beroepsproduct'));
     const vSel = h('select',{class:'input', onchange:e=>{
       const variant = e.target.value;
@@ -1279,14 +1301,17 @@ function renderActivityEditor(act, idx, tid, themeSubjects=[]){
     });
     body.appendChild(vSel);
 
+    /* ---------- TITEL ---------- */
     body.appendChild(h('label',{},'Titel / opdracht voor de student'));
     body.appendChild(h('input',{class:'input', placeholder:'bv. Schrijf een mutatie over de aangetroffen situatie',
       value:act.title||'', oninput:e=>upd({title:e.target.value})}));
 
+    /* ---------- CASUS ---------- */
     body.appendChild(h('label',{},'Casus / context voor de student'));
     body.appendChild(h('textarea',{class:'input', rows:6, placeholder:'Beschrijf de situatie die de student moet uitwerken…',
       oninput:e=>upd({casus:e.target.value})}, act.casus||''));
 
+    /* ---------- CHECKLIST ---------- */
     body.appendChild(h('label',{},'Checklist-eisen (één per regel — student vinkt ze af tijdens het schrijven)'));
     const cl = Array.isArray(act.checklist) ? act.checklist : defaultBPChecklist(act.variant||'mutatie');
     cl.forEach((item,i)=>{
@@ -1299,10 +1324,17 @@ function renderActivityEditor(act, idx, tid, themeSubjects=[]){
         }},'✕')
       ));
     });
-    body.appendChild(h('button',{class:'btn ghost small', onclick:()=>upd({checklist:[...cl,'Nieuwe eis…']})},'+ Eis toevoegen'));
+    body.appendChild(h('button',{class:'btn ghost small', onclick:()=>{
+      upd({checklist:[...cl,'Nieuwe eis…']});
+      renderEditor();
+    }},'+ Eis toevoegen'));
     body.appendChild(h('button',{class:'btn ghost small', style:{marginLeft:'8px'},
-      onclick:()=>upd({checklist: defaultBPChecklist(act.variant||'mutatie')})},'↺ Standaard-eisen herstellen'));
+      onclick:()=>{
+        upd({checklist: defaultBPChecklist(act.variant||'mutatie')});
+        renderEditor();
+      }},'↺ Standaard-eisen herstellen'));
 
+    /* ---------- LIVE FEED TOGGLE ---------- */
     const feedOn = !!act.feedPublic;
     const toggle = h('label',{class:'bp-toggle '+(feedOn?'on':'off'), title:'Bepaal of studenten elkaars ingeleverde teksten in de livefeed zien'},
       h('input',{type:'checkbox', checked:feedOn, onchange:e=>{
@@ -1318,6 +1350,7 @@ function renderActivityEditor(act, idx, tid, themeSubjects=[]){
     );
     body.appendChild(toggle);
 
+    /* ---------- INZENDINGEN BEKIJKEN ---------- */
     body.appendChild(h('div',{style:{marginTop:'12px'}},
       h('button',{class:'btn small', onclick:()=>openSubmissionsModal(tid, act)}, '📥 Bekijk inzendingen van studenten')
     ));
@@ -1329,9 +1362,14 @@ function renderActivityEditor(act, idx, tid, themeSubjects=[]){
       h('label',{},'Items'),
       ...items.map((it,ii)=>h('div',{style:{display:'flex',gap:'8px',marginBottom:'6px'}},
         h('input',{class:'input', value:it, oninput:e=>{const n=[...items]; n[ii]=e.target.value; upd({items:n});}}),
-        h('button',{class:'btn danger small', onclick:()=>{const n=[...items]; n.splice(ii,1); upd({items:n}); renderEditor();}},'✕')
+        h('button',{class:'btn danger small', onclick:()=>{
+          const n=[...items]; n.splice(ii,1); upd({items:n}); renderEditor();
+        }},'✕')
       )),
-      h('button',{class:'btn ghost small', onclick:()=>upd({items:[...items,'Item '+(items.length+1)]})},'+ Item')
+      h('button',{class:'btn ghost small', onclick:()=>{
+        upd({items:[...items,'Item '+(items.length+1)]});
+        renderEditor();
+      }},'+ Item')
     );
   }
   else if(act.type==='whiteboard'){
