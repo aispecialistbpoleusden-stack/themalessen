@@ -339,7 +339,7 @@ async function addSubjectToTheme(tid, name){
   const newSubs = [...cur, nm];
   await update(ref(db,'themes/'+tid), {
     subjects: newSubs,
-    subject: '',        // migreer legacy veld
+    subject: '',
     updatedAt: Date.now()
   });
 }
@@ -873,13 +873,7 @@ ${bodyHtml}
   setTimeout(()=>{ try{ w.print(); }catch(e){} }, 400);
 }
 
-/* ================= STRUCTUUR-SIGNATUUR =================
-   Voorkomt dat de editor opnieuw wordt opgebouwd bij elke toetsaanslag.
-   Alleen wanneer de structuur van een thema écht verandert (nieuwe/
-   verwijderde/verplaatste activiteit, vak toegevoegd, variant gewijzigd,
-   doelstelling gekoppeld) wordt renderEditor() opnieuw uitgevoerd.
-   Tekst-, naam-, beschrijvings- en checklistwijzigingen laten de DOM
-   met rust zodat de cursor in het invoerveld blijft staan.            */
+/* ================= STRUCTUUR-SIGNATUUR ================= */
 function themeStructureSig(themes){
   if(!themes) return '';
   return Object.keys(themes).sort().map(tid=>{
@@ -1272,7 +1266,6 @@ function renderActivityEditor(act, idx, tid, themeSubjects=[]){
     body.appendChild(wrap);
   }
   else if(act.type==='beroepsproduct'){
-    /* ---------- VARIANT ---------- */
     body.appendChild(h('label',{},'Variant van het beroepsproduct'));
     const vSel = h('select',{class:'input', onchange:e=>{
       const variant = e.target.value;
@@ -1286,17 +1279,14 @@ function renderActivityEditor(act, idx, tid, themeSubjects=[]){
     });
     body.appendChild(vSel);
 
-    /* ---------- TITEL ---------- */
     body.appendChild(h('label',{},'Titel / opdracht voor de student'));
     body.appendChild(h('input',{class:'input', placeholder:'bv. Schrijf een mutatie over de aangetroffen situatie',
       value:act.title||'', oninput:e=>upd({title:e.target.value})}));
 
-    /* ---------- CASUS ---------- */
     body.appendChild(h('label',{},'Casus / context voor de student'));
     body.appendChild(h('textarea',{class:'input', rows:6, placeholder:'Beschrijf de situatie die de student moet uitwerken…',
       oninput:e=>upd({casus:e.target.value})}, act.casus||''));
 
-    /* ---------- CHECKLIST ---------- */
     body.appendChild(h('label',{},'Checklist-eisen (één per regel — student vinkt ze af tijdens het schrijven)'));
     const cl = Array.isArray(act.checklist) ? act.checklist : defaultBPChecklist(act.variant||'mutatie');
     cl.forEach((item,i)=>{
@@ -1313,7 +1303,6 @@ function renderActivityEditor(act, idx, tid, themeSubjects=[]){
     body.appendChild(h('button',{class:'btn ghost small', style:{marginLeft:'8px'},
       onclick:()=>upd({checklist: defaultBPChecklist(act.variant||'mutatie')})},'↺ Standaard-eisen herstellen'));
 
-    /* ---------- LIVE FEED TOGGLE ---------- */
     const feedOn = !!act.feedPublic;
     const toggle = h('label',{class:'bp-toggle '+(feedOn?'on':'off'), title:'Bepaal of studenten elkaars ingeleverde teksten in de livefeed zien'},
       h('input',{type:'checkbox', checked:feedOn, onchange:e=>{
@@ -1329,7 +1318,6 @@ function renderActivityEditor(act, idx, tid, themeSubjects=[]){
     );
     body.appendChild(toggle);
 
-    /* ---------- INZENDINGEN BEKIJKEN ---------- */
     body.appendChild(h('div',{style:{marginTop:'12px'}},
       h('button',{class:'btn small', onclick:()=>openSubmissionsModal(tid, act)}, '📥 Bekijk inzendingen van studenten')
     ));
@@ -1922,7 +1910,6 @@ const VEHICLES = {
   'road-curve-right': {label:'Bocht rechts', svg:`<svg viewBox="0 0 100 100"><path d="M 25 0 L 25 35 Q 25 75 65 75 L 100 75" stroke="#3f4550" stroke-width="50" fill="none" stroke-linecap="butt"/><path d="M 25 0 L 25 35 Q 25 75 65 75 L 100 75" stroke="#fbbf24" stroke-width="3" stroke-dasharray="12 9" fill="none"/><path d="M 25 0 L 25 35 Q 25 75 65 75 L 100 75" stroke="#e5e7eb" stroke-width="2" fill="none" transform="translate(24,0)"/><path d="M 25 0 L 25 35 Q 25 75 65 75 L 100 75" stroke="#e5e7eb" stroke-width="2" fill="none" transform="translate(-24,0)"/></svg>`},
   tree: {label:'Boom', svg:`<svg viewBox="0 0 60 80"><rect x="26" y="55" width="8" height="25" fill="#5b3a1e" rx="2"/><circle cx="30" cy="35" r="22" fill="#15803d"/><circle cx="18" cy="45" r="15" fill="#166534"/><circle cx="42" cy="45" r="15" fill="#166534"/><circle cx="30" cy="25" r="14" fill="#22c55e" opacity=".55"/></svg>`},
   bush: {label:'Struik', svg:`<svg viewBox="0 0 80 50"><ellipse cx="24" cy="35" rx="22" ry="15" fill="#15803d"/><ellipse cx="56" cy="35" rx="22" ry="15" fill="#166534"/><ellipse cx="40" cy="25" rx="20" ry="14" fill="#22c55e"/><ellipse cx="40" cy="20" rx="11" ry="8" fill="#4ade80" opacity=".5"/></svg>`},
-
   car: {label:'Auto', svg:`<svg viewBox="0 0 40 70"><rect x="4" y="4" width="32" height="62" rx="8" fill="#2563eb"/><rect x="9" y="12" width="22" height="14" rx="3" fill="#bfdbfe"/><rect x="9" y="44" width="22" height="14" rx="3" fill="#bfdbfe"/></svg>`},
   truck: {label:'Vrachtwagen', svg:`<svg viewBox="0 0 44 80"><rect x="4" y="4" width="36" height="72" rx="4" fill="#1e3a8a"/><rect x="9" y="10" width="26" height="16" rx="2" fill="#bfdbfe"/></svg>`},
   bus: {label:'Bus', svg:`<svg viewBox="0 0 44 90"><rect x="4" y="4" width="36" height="82" rx="6" fill="#fbbf24"/><rect x="9" y="12" width="26" height="18" fill="#fef3c7"/></svg>`},
@@ -2030,10 +2017,6 @@ function bindRotor(el, inner, key, itemsRef){
     const r = el.getBoundingClientRect();
     return {cx: r.left + r.width/2, cy: r.top + r.height/2};
   }
-  function getAngle(px, py){
-    const {cx, cy} = getCenter();
-    return Math.atan2(py-cy, px-cx) * 180 / Math.PI;
-  }
 
   rotor.addEventListener('pointerdown', e=>{
     e.preventDefault(); e.stopPropagation();
@@ -2042,4 +2025,186 @@ function bindRotor(el, inner, key, itemsRef){
     rotor.setPointerCapture(e.pointerId);
     const {cx, cy} = getCenter();
     centerX = cx; centerY = cy;
-    startAngle = Math.atan2(e.clientY-cy, e.clientX-cx)
+    startAngle = Math.atan2(e.clientY-cy, e.clientX-cx) * 180 / Math.PI;
+    const cur = (el.dataset.rot ? parseFloat(el.dataset.rot) : 0);
+    startRot = cur;
+    clearTimeout(clickTimeout);
+  });
+
+  rotor.addEventListener('pointermove', e=>{
+    if(!rotating) return;
+    dragStarted = true;
+    const a = Math.atan2(e.clientY-centerY, e.clientX-centerX) * 180 / Math.PI;
+    let delta = a - startAngle;
+    let newRot = startRot + delta;
+    if(!e.shiftKey){
+      newRot = Math.round(newRot / 15) * 15;
+    }
+    newRot = ((newRot % 360) + 360) % 360;
+    el.dataset.rot = newRot;
+    inner.style.transform = `rotate(${newRot}deg)`;
+  });
+
+  function endRotate(e){
+    if(!rotating) return;
+    rotating = false;
+    el.classList.remove('rotating');
+    if(!dragStarted){
+      const cur = parseFloat(el.dataset.rot || 0);
+      const step = e && e.shiftKey ? -15 : 15;
+      const newRot = ((cur + step) % 360 + 360) % 360;
+      el.dataset.rot = newRot;
+      inner.style.transform = `rotate(${newRot}deg)`;
+      update(itemsRef, {[key+'/rot']: newRot});
+    } else {
+      const cur = parseFloat(el.dataset.rot || 0);
+      update(itemsRef, {[key+'/rot']: cur});
+    }
+  }
+  rotor.addEventListener('pointerup', endRotate);
+  rotor.addEventListener('pointercancel', endRotate);
+}
+
+/* ================= WHITEBOARD ================= */
+function renderWhiteboard(act, tid){
+  const card = h('div',{class:'student-act'});
+  card.appendChild(h('h3',{},'🎨 '+(act.title||'Samen tekenen')));
+  const canvas = h('canvas',{class:'whiteboard'});
+  card.appendChild(canvas);
+  const tools = h('div',{class:'wb-tools'});
+  card.appendChild(tools);
+
+  const colors = ['#111827','#dc2626','#2563eb','#10b981','#fbbf24'];
+  let color = colors[0];
+  colors.forEach((c,i)=>{
+    const dot = h('div',{class:'color-dot'+(i===0?' active':''), style:{background:c}, onclick:()=>{
+      color = c; $$('.color-dot', tools).forEach((d,j)=>d.classList.toggle('active',j===i));
+    }});
+    tools.appendChild(dot);
+  });
+  tools.appendChild(h('button',{class:'btn ghost small', onclick:()=>{
+    if(confirm('Whiteboard wissen voor iedereen?')) remove(ref(db,`responses/${tid}/${act.id}/strokes`));
+  }},'🧽 Wissen'));
+
+  const ctx = canvas.getContext('2d');
+  setTimeout(()=>{
+    canvas.width = canvas.clientWidth || 800;
+    canvas.height = canvas.clientHeight || 450;
+    ctx.fillStyle='#fff'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  },0);
+
+  function draw(s){
+    ctx.strokeStyle = s.color; ctx.lineWidth = s.w*canvas.width; ctx.lineCap='round';
+    ctx.beginPath();
+    ctx.moveTo(s.x1*canvas.width, s.y1*canvas.height);
+    ctx.lineTo(s.x2*canvas.width, s.y2*canvas.height);
+    ctx.stroke();
+  }
+
+  const strokesRef = ref(db,`responses/${tid}/${act.id}/strokes`);
+  const unsub = onChildAdded(strokesRef, snap=>{ draw(snap.val()); });
+  track(unsub);
+
+  let drawing=false, last=null;
+  function pos(e){
+    const r = canvas.getBoundingClientRect();
+    return {x:(e.clientX-r.left)/r.width, y:(e.clientY-r.top)/r.height};
+  }
+  canvas.addEventListener('pointerdown', e=>{ drawing=true; last=pos(e); canvas.setPointerCapture(e.pointerId); });
+  canvas.addEventListener('pointermove', e=>{
+    if(!drawing) return;
+    const p = pos(e);
+    const s = {x1:last.x, y1:last.y, x2:p.x, y2:p.y, color, w:0.005};
+    draw(s); push(strokesRef, s); last = p;
+  });
+  const stop = ()=>drawing=false;
+  canvas.addEventListener('pointerup', stop);
+  canvas.addEventListener('pointercancel', stop);
+  return card;
+}
+
+/* ================= DOCENT LISTENERS ================= */
+function setupTeacherListeners(){
+  onValue(ref(db,'themes'), snap=>{
+    state.themes = snap.val()||{};
+    const sig = themeStructureSig(state.themes);
+    if(sig !== state._themesSig){
+      state._themesSig = sig;
+      renderEditor();
+    }
+    renderThemeList();
+  });
+  onValue(ref(db,'pushes'), snap=>{
+    state.pushes = snap.val()||{};
+    renderThemeList();
+    renderPushedList();
+    renderEditor();
+  });
+  onValue(ref(db,'objectives'), snap=>{
+    state.objectives = snap.val()||{};
+    renderEditor();
+  });
+  onValue(ref(db,'subjects'), snap=>{
+    state.subjects = snap.val()||{};
+    renderEditor();
+  });
+}
+
+/* ================= student LISTENERS ================= */
+function setupStudentListeners(){
+  if(studentPushUnsub){ studentPushUnsub(); studentPushUnsub = null; }
+  if(studentThemeUnsub){ studentThemeUnsub(); studentThemeUnsub = null; }
+
+  const cls = state.user.klass;
+  studentPushUnsub = onValue(ref(db,'pushes/'+cls), snap=>{
+    const newId = snap.val();
+    if(newId === state.myPushedId) return;
+    state.myPushedId = newId;
+    if(studentThemeUnsub){ studentThemeUnsub(); studentThemeUnsub = null; }
+    if(newId){
+      studentThemeUnsub = onValue(ref(db,'themes/'+newId), s2=>{
+        const newTheme = s2.val();
+        const sig = JSON.stringify(Object.keys(
+          (newTheme?.activities||[]).reduce((a,x)=>(a[x.id]=x.type,a),{})
+        )) + '|' + (newTheme?.name||'') + '|' + (newTheme?.description||'');
+        const prev = state._lastSig;
+        state.pushedTheme = newTheme;
+        if(sig !== prev){
+          state._lastSig = sig;
+          renderStudent();
+        }
+      });
+      toast('🎉 Nieuwe les gestart!','success');
+    } else {
+      state.pushedTheme = null;
+      state._lastSig = null;
+      renderStudent();
+    }
+  });
+}
+
+/* ================= MAIN RENDER ================= */
+function render(){
+  clearTracked();
+  const root = $('#app');
+  root.innerHTML = '';
+  if(!state.user){ root.appendChild(renderLogin()); return; }
+  if(state.user.role==='docent'){
+    root.appendChild(renderTeacher());
+    setupTeacherListeners();
+  } else {
+    renderStudent();
+    setupStudentListeners();
+  }
+}
+
+/* ================= BOOT ================= */
+render();
+window.addEventListener('beforeunload', ()=>{
+  if(state.user && state.user.id){
+    set(ref(db,'users/'+state.user.id+'/online'), false).catch(()=>{});
+  }
+});
+</script>
+</body>
+</html>
