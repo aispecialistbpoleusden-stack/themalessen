@@ -181,6 +181,29 @@ canvas.whiteboard{width:100%;aspect-ratio:16/9;background:#fff;border-radius:14p
 .subject-chip .remove:hover{opacity:1;color:var(--danger)}
 .hero .chip.subject{background:rgba(251,191,36,.18);color:var(--accent);border-color:rgba(251,191,36,.4)}
 
+/* ===== Doelstellingen per vak ===== */
+.obj-panel{margin-top:10px;border:1px solid var(--border);border-radius:14px;background:rgba(255,255,255,.02);overflow:hidden}
+.obj-panel-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 16px;background:rgba(37,99,235,.10);border-bottom:1px solid var(--border)}
+.obj-panel-head h4{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:#bfdbfe;font-weight:800}
+.obj-panel-head .hint{font-size:11px;color:var(--muted);font-weight:600}
+.obj-subject{padding:12px 16px}
+.obj-subject + .obj-subject{border-top:1px solid rgba(38,67,107,.55)}
+.obj-subject-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.obj-subject-head .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);opacity:.65}
+.obj-subject-head .nm{font-size:12px;font-weight:800;letter-spacing:.4px;color:#dbe6f7;text-transform:uppercase}
+.obj-subject-head .cnt{margin-left:auto;font-size:11px;color:var(--muted);font-weight:600}
+.obj-chips{display:flex;flex-direction:column;gap:6px}
+.obj-chip{display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(251,191,36,.05);border:1px solid rgba(251,191,36,.16);border-left:2px solid rgba(251,191,36,.45);border-radius:9px;font-size:13px;cursor:pointer;transition:.15s}
+.obj-chip:hover{background:rgba(251,191,36,.10);border-color:rgba(251,191,36,.32);transform:translateX(2px)}
+.obj-chip.active{background:rgba(251,191,36,.14);border-color:rgba(251,191,36,.55);box-shadow:inset 0 0 0 1px rgba(251,191,36,.18)}
+.obj-chip .txt{flex:1;color:#dbe6f7;line-height:1.45}
+.obj-chip .rm{background:transparent;border:none;color:var(--muted);font-size:12px;padding:2px 5px;border-radius:6px;cursor:pointer;line-height:1}
+.obj-chip .rm:hover{color:#fff;background:rgba(220,38,38,.5)}
+.obj-empty{font-size:12px;color:var(--muted);font-style:italic;padding:2px 0 4px}
+.obj-add{display:flex;gap:8px;margin-top:8px}
+.obj-add .input{padding:8px 12px;font-size:13px}
+.obj-add .btn{padding:8px 12px;font-size:12px}
+
 @media(max-width:800px){
   .main-grid{grid-template-columns:1fr}
   .sidebar{border-right:none;border-bottom:1px solid var(--border)}
@@ -249,6 +272,28 @@ async function removeSubjectFromTheme(tid, name){
     activities: acts,
     updatedAt: Date.now()
   });
+}
+
+/* ================= DOELSTELLINGEN PER VAK ================= */
+function getSubjectObjectives(subject){
+  const out = [];
+  for(const o of Object.values(state.objectives||{})){
+    if(!o || !o.text) continue;
+    if((o.subject||'') === (subject||'') && !out.includes(o.text)) out.push(o.text);
+  }
+  return out;
+}
+async function addObjective(text, subject=''){
+  const t = String(text||'').trim();
+  if(!t) return;
+  if(getSubjectObjectives(subject).includes(t)) return;
+  await update(ref(db,'objectives/'+uid()), {text:t, subject:subject||''});
+}
+async function removeObjective(text, subject=''){
+  const entry = Object.entries(state.objectives||{})
+    .find(([_,o])=>o && o.text===text && (o.subject||'')===(subject||''));
+  if(!entry) return;
+  await remove(ref(db,'objectives/'+entry[0]));
 }
 
 /* ================= UTIL ================= */
@@ -587,8 +632,17 @@ function renderEditor(){
     if(v==='__new'){
       const n = prompt('Naam van het nieuwe vak:');
       if(n && n.trim()){
-        await update(ref(db,'subjects/'+uid()), {name:n.trim()});
-        await addSubjectToTheme(tid, n.trim());
+        const nm = n.trim();
+        await update(ref(db,'subjects/'+uid()), {name:nm});
+        await addSubjectToTheme(tid, nm);
+
+        const objs = prompt('Doelstellingen voor "'+nm+'" (één per regel, mag leeg blijven):');
+        if(objs && objs.trim()){
+          for(const line of objs.split('\n').map(s=>s.trim()).filter(Boolean)){
+            await addObjective(line, nm);
+          }
+        }
+        toast('Vak "'+nm+'" toegevoegd','success');
       }
     } else {
       await addSubjectToTheme(tid, v);
@@ -598,13 +652,13 @@ function renderEditor(){
   manager.appendChild(addSubj);
   ed.appendChild(manager);
 
-  /* ---------- DOELSTELLING ---------- */
-  ed.appendChild(h('label',{},'Doelstelling'));
+  /* ---------- DOELSTELLING VAN DIT THEMA ---------- */
+  ed.appendChild(h('label',{},'Doelstelling van dit thema'));
   const objSelect = h('select',{class:'input', onchange:async e=>{
     if(e.target.value==='__new'){
-      const v = prompt('Nieuwe doelstelling:');
+      const v = prompt('Nieuwe algemene doelstelling:');
       if(v && v.trim()){
-        await update(ref(db,'objectives/'+uid()), {text:v.trim()});
+        await addObjective(v.trim(), '');
         await update(ref(db,'themes/'+tid), {objective:v.trim(), updatedAt:Date.now()});
       }
       return;
@@ -612,15 +666,95 @@ function renderEditor(){
     update(ref(db,'themes/'+tid),{objective:e.target.value, updatedAt:Date.now()});
   }});
   objSelect.appendChild(h('option',{value:''},'— Kies een doelstelling —'));
-  const objVals = Object.values(state.objectives||{}).map(o=>o.text).filter(Boolean);
-  const allObj = [...new Set([...objVals, theme.objective].filter(Boolean))];
-  for(const o of allObj){
-    const opt = h('option',{value:o},o);
-    if(o===theme.objective) opt.selected=true;
+
+  let currentFound = false;
+  themeSubjects.forEach(s=>{
+    const list = getSubjectObjectives(s);
+    if(!list.length) return;
+    const grp = h('optgroup',{label:'📘 '+s});
+    list.forEach(o=>{
+      const opt = h('option',{value:o},o);
+      if(o===theme.objective){ opt.selected = true; currentFound = true; }
+      grp.appendChild(opt);
+    });
+    objSelect.appendChild(grp);
+  });
+  const genObjs = getSubjectObjectives('');
+  if(genObjs.length){
+    const grp = h('optgroup',{label:'⚪ Algemeen'});
+    genObjs.forEach(o=>{
+      const opt = h('option',{value:o},o);
+      if(o===theme.objective){ opt.selected = true; currentFound = true; }
+      grp.appendChild(opt);
+    });
+    objSelect.appendChild(grp);
+  }
+  if(theme.objective && !currentFound){
+    const opt = h('option',{value:theme.objective}, theme.objective);
+    opt.selected = true;
     objSelect.appendChild(opt);
   }
   objSelect.appendChild(h('option',{value:'__new'},'➕ Nieuwe doelstelling toevoegen…'));
   ed.appendChild(objSelect);
+
+  /* ---------- DOELSTELLINGEN PER VAK ---------- */
+  const objPanel = h('div',{class:'obj-panel'});
+  objPanel.appendChild(h('div',{class:'obj-panel-head'},
+    h('h4',{},'Doelstellingen per vak'),
+    h('span',{class:'hint'},'Klik op een doelstelling om die aan dit thema te koppelen')
+  ));
+
+  function subjectObjBlock(subject){
+    const list = getSubjectObjectives(subject);
+    const block = h('div',{class:'obj-subject'});
+    block.appendChild(h('div',{class:'obj-subject-head'},
+      h('span',{class:'dot'}),
+      h('span',{class:'nm'}, subject || 'Algemeen'),
+      h('span',{class:'cnt'}, list.length + (list.length===1?' doelstelling':' doelstellingen'))
+    ));
+
+    const chips = h('div',{class:'obj-chips'});
+    if(!list.length){
+      chips.appendChild(h('div',{class:'obj-empty'},
+        subject ? 'Nog geen doelstellingen voor dit vak' : 'Nog geen algemene doelstellingen'));
+    }
+    list.forEach(o=>{
+      const chip = h('div',{class:'obj-chip'+(o===theme.objective?' active':''), title:'Koppel aan dit thema'},
+        h('span',{class:'txt'}, o),
+        h('button',{class:'rm', title:'Doelstelling verwijderen', onclick:async e=>{
+          e.stopPropagation();
+          if(!confirm('Doelstelling verwijderen?')) return;
+          await removeObjective(o, subject);
+        }},'✕')
+      );
+      chip.addEventListener('click', ()=>{
+        update(ref(db,'themes/'+tid),{objective:o, updatedAt:Date.now()});
+      });
+      chips.appendChild(chip);
+    });
+    block.appendChild(chips);
+
+    const inp = h('input',{class:'input',
+      placeholder: subject ? 'Nieuwe doelstelling voor '+subject+'…' : 'Nieuwe algemene doelstelling…'});
+    const add = h('button',{class:'btn primary small', onclick:async ()=>{
+      const v = inp.value.trim(); if(!v) return;
+      await addObjective(v, subject);
+      inp.value='';
+    }},'+ Toevoegen');
+    inp.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); add.click(); }});
+    block.appendChild(h('div',{class:'obj-add'}, inp, add));
+    return block;
+  }
+
+  if(themeSubjects.length){
+    themeSubjects.forEach(s=> objPanel.appendChild(subjectObjBlock(s)));
+  } else {
+    objPanel.appendChild(h('div',{class:'obj-subject'},
+      h('div',{class:'obj-empty'},'Voeg eerst een vakgebied toe — daarna kun je hier per vak doelstellingen noteren.')
+    ));
+  }
+  objPanel.appendChild(subjectObjBlock(''));
+  ed.appendChild(objPanel);
 
   /* ---------- BESCHRIJVING ---------- */
   ed.appendChild(h('label',{},'Beschrijving van het thema'));
