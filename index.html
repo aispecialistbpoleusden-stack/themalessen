@@ -204,6 +204,52 @@ canvas.whiteboard{width:100%;aspect-ratio:16/9;background:#fff;border-radius:14p
 .obj-add .input{padding:8px 12px;font-size:13px}
 .obj-add .btn{padding:8px 12px;font-size:12px}
 
+/* ===== Beroepsproduct ===== */
+.bp-wrap{display:grid;grid-template-columns:280px 1fr;gap:16px;margin-top:12px}
+@media(max-width:900px){.bp-wrap{grid-template-columns:1fr}}
+.bp-checklist{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;position:sticky;top:80px;align-self:start}
+.bp-checklist h4{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--accent);font-weight:800;margin-bottom:10px}
+.bp-check{display:flex;gap:8px;align-items:flex-start;padding:7px 10px;border-radius:8px;font-size:13px;cursor:pointer;transition:.15s;color:#dbe6f7;line-height:1.4}
+.bp-check:hover{background:rgba(251,191,36,.07)}
+.bp-check input{margin-top:2px;accent-color:var(--accent);cursor:pointer}
+.bp-check.done span{color:var(--muted);text-decoration:line-through}
+.bp-check .bullet{color:var(--accent);font-weight:800;flex-shrink:0}
+.bp-editor-area{display:flex;flex-direction:column;gap:10px}
+.bp-variant{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:rgba(37,99,235,.2);color:#93c5fd;border:1px solid rgba(37,99,235,.4);border-radius:20px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px}
+.bp-variant.mutatie{background:rgba(16,185,129,.2);color:#6ee7b7;border-color:rgba(16,185,129,.4)}
+.bp-variant.aangifte{background:rgba(220,38,38,.2);color:#fca5a5;border-color:rgba(220,38,38,.4)}
+.bp-variant.bevindingen{background:rgba(251,191,36,.2);color:var(--accent);border-color:rgba(251,191,36,.4)}
+.bp-casus{padding:12px 16px;background:rgba(37,99,235,.10);border-left:3px solid var(--primary-2);border-radius:10px;margin-bottom:12px;line-height:1.65;color:#dbe6f7;white-space:pre-wrap;font-size:14px}
+.bp-textarea{min-height:340px;font-family:ui-monospace,'Courier New',monospace;font-size:14px;line-height:1.65;padding:16px}
+.bp-count{font-size:11px;color:var(--muted);text-align:right}
+.bp-status{font-size:12px;color:var(--muted)}
+.bp-list{margin-top:14px;padding:12px;background:var(--card2);border-radius:10px;border:1px solid var(--border)}
+.bp-list h4{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--accent);font-weight:800;margin-bottom:8px}
+.bp-list-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(38,67,107,.4);font-size:12px}
+.bp-list-row:last-child{border-bottom:none}
+.bp-list-row .nm{font-weight:700;color:var(--text)}
+.bp-list-row .kl{color:var(--accent);font-weight:700;margin:0 6px}
+.bp-list-row .ts{color:var(--muted);font-size:11px;margin-left:auto}
+.bp-feed{display:flex;flex-direction:column;gap:10px;max-height:460px;overflow-y:auto;padding:6px}
+.bp-feed-item{background:var(--card2);padding:12px 14px;border-radius:10px;border-left:3px solid var(--accent);animation:slideUp .3s ease both}
+.bp-feed-item .who{font-size:11px;color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:.5px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.bp-feed-item .who .kl{background:rgba(251,191,36,.18);color:var(--accent);padding:1px 7px;border-radius:8px;font-size:10px}
+.bp-feed-item .who .ts{margin-left:auto;color:var(--muted);font-weight:600;font-size:10px;letter-spacing:0;text-transform:none}
+.bp-feed-item .msg{margin-top:8px;line-height:1.6;font-size:13px;white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,'Courier New',monospace;color:#dbe6f7}
+.bp-feed-empty{color:var(--muted);font-size:12px;font-style:italic;padding:6px 0}
+.bp-feed-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+.bp-feed-head h4{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--accent);font-weight:800}
+.bp-toggle{display:flex;align-items:center;gap:12px;margin-top:14px;padding:12px 16px;background:var(--card);border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:.15s}
+.bp-toggle:hover{background:var(--card2)}
+.bp-toggle input{width:20px;height:20px;accent-color:var(--ok);cursor:pointer;flex-shrink:0}
+.bp-toggle .lbl{display:flex;flex-direction:column;gap:2px}
+.bp-toggle .lbl strong{font-size:13px;font-weight:800;letter-spacing:.3px}
+.bp-toggle .lbl small{font-size:11px;color:var(--muted);font-weight:600;text-transform:none;letter-spacing:0}
+.bp-toggle.on{border-left:3px solid var(--ok)}
+.bp-toggle.on .lbl strong{color:var(--ok)}
+.bp-toggle.off{border-left:3px solid var(--muted)}
+.bp-toggle.off .lbl strong{color:var(--muted)}
+
 @media(max-width:800px){
   .main-grid{grid-template-columns:1fr}
   .sidebar{border-right:none;border-bottom:1px solid var(--border)}
@@ -240,6 +286,41 @@ const DEFAULT_SUBJECTS = [
   'Engels',
   'Eerste Hulp door Politie'
 ];
+
+/* ================= BEROEPSPRODUCT ================= */
+const BP_VARIANTS = {
+  'mutatie':        {label:'Mutatie (ASTMA)', badge:'mutatie'},
+  'pv-aangifte':    {label:'PV Aangifte',     badge:'aangifte'},
+  'pv-bevindingen': {label:'PV Bevindingen',  badge:'bevindingen'}
+};
+const BP_DEFAULT_CHECKLISTS = {
+  'mutatie': [
+    'A – Aanleiding van de mutatie',
+    'S – Situatie ter plaatse',
+    'T – Taken die zijn uitgevoerd',
+    'M – Maatregelen die zijn genomen',
+    'A – Afhandeling / resultaat',
+    'Alle gouden W\'s beantwoord (wie, wat, waar, wanneer, waarom, waarmee, hoe)'
+  ],
+  'pv-aangifte': [
+    'Bestanddeelteksten volledig ingevuld',
+    'Gouden W\'s beantwoord (wie, wat, waar, wanneer, waarom, waarmee, hoe)',
+    'Decorbeschrijvingen opgenomen',
+    'Onvoltooid verleden tijd gebruikt',
+    'Redenen van wetenschap vermeld'
+  ],
+  'pv-bevindingen': [
+    'Bestanddeelteksten volledig ingevuld',
+    'Gouden W\'s beantwoord (wie, wat, waar, wanneer, waarom, waarmee, hoe)',
+    'Decorbeschrijvingen opgenomen',
+    'Onvoltooid verleden tijd gebruikt',
+    'Redenen van wetenschap vermeld',
+    'Ambtshandelingen beschreven'
+  ]
+};
+function defaultBPChecklist(variant){
+  return [...(BP_DEFAULT_CHECKLISTS[variant] || BP_DEFAULT_CHECKLISTS.mutatie)];
+}
 
 /* ================= VAKKEN PER THEMA ================= */
 function getThemeSubjects(theme){
@@ -406,6 +487,13 @@ function addActivity(themeId, type, subject=''){
   if(type==='traffic'){
     base.question = '';
     base.vehicles = ['road-straight','road-curve-left','road-curve-right','tree','bush','car','truck','bus','bike','ped','light','sign'];
+  }
+  if(type==='beroepsproduct'){
+    base.title = 'Beroepsproduct';
+    base.variant = 'mutatie';
+    base.casus = '';
+    base.checklist = defaultBPChecklist('mutatie');
+    base.feedPublic = false;
   }
   const acts = [...(state.themes[themeId].activities||[]), base];
   update(ref(db,'themes/'+themeId),{activities:acts, updatedAt:Date.now()});
@@ -843,6 +931,7 @@ function renderEditor(){
   const types = [
     ['text','📝 Tekst'],['image','🖼️ Afbeelding'],['youtube','▶️ YouTube'],
     ['iframe','🌐 Website'],['openq','💬 Open vraag'],['quiz','🧠 Quiz'],
+    ['beroepsproduct','📋 Beroepsproduct'],
     ['drag','🖱️ Sleepopdracht'],['whiteboard','🎨 Whiteboard'],['traffic','🚦 Verkeerssituatie']
   ];
   for(const [t,l] of types){
@@ -852,7 +941,7 @@ function renderEditor(){
 }
 
 /* ================= ACTIVITY EDITORS ================= */
-const TYPE_LABELS = {text:'Tekst', image:'Afbeelding', youtube:'YouTube', iframe:'Website', openq:'Open vraag', quiz:'Quiz', drag:'Sleepopdracht', whiteboard:'Whiteboard', traffic:'Verkeerssituatie'};
+const TYPE_LABELS = {text:'Tekst', image:'Afbeelding', youtube:'YouTube', iframe:'Website', openq:'Open vraag', quiz:'Quiz', drag:'Sleepopdracht', whiteboard:'Whiteboard', traffic:'Verkeerssituatie', beroepsproduct:'Beroepsproduct'};
 
 function renderActivityEditor(act, idx, tid, themeSubjects=[]){
   const card = h('div',{class:'act-card'});
@@ -944,6 +1033,69 @@ function renderActivityEditor(act, idx, tid, themeSubjects=[]){
     wrap.appendChild(h('button',{class:'btn primary small', onclick:()=>upd({questions:[...qs,{qtype:'open', q:''}]})},'+ Vraag toevoegen'));
     body.appendChild(wrap);
   }
+  else if(act.type==='beroepsproduct'){
+    /* ---------- VARIANT ---------- */
+    body.appendChild(h('label',{},'Variant van het beroepsproduct'));
+    const vSel = h('select',{class:'input', onchange:e=>{
+      const variant = e.target.value;
+      upd({variant, checklist: defaultBPChecklist(variant)});
+      renderEditor();
+    }});
+    Object.entries(BP_VARIANTS).forEach(([v,info])=>{
+      const o = h('option',{value:v}, info.label);
+      if((act.variant||'mutatie')===v) o.selected = true;
+      vSel.appendChild(o);
+    });
+    body.appendChild(vSel);
+
+    /* ---------- TITEL ---------- */
+    body.appendChild(h('label',{},'Titel / opdracht voor de student'));
+    body.appendChild(h('input',{class:'input', placeholder:'bv. Schrijf een mutatie over de aangetroffen situatie',
+      value:act.title||'', oninput:e=>upd({title:e.target.value})}));
+
+    /* ---------- CASUS ---------- */
+    body.appendChild(h('label',{},'Casus / context voor de student'));
+    body.appendChild(h('textarea',{class:'input', rows:6, placeholder:'Beschrijf de situatie die de student moet uitwerken…',
+      oninput:e=>upd({casus:e.target.value})}, act.casus||''));
+
+    /* ---------- CHECKLIST ---------- */
+    body.appendChild(h('label',{},'Checklist-eisen (één per regel — student vinkt ze af tijdens het schrijven)'));
+    const cl = Array.isArray(act.checklist) ? act.checklist : defaultBPChecklist(act.variant||'mutatie');
+    cl.forEach((item,i)=>{
+      body.appendChild(h('div',{style:{display:'flex',gap:'8px',marginBottom:'6px'}},
+        h('input',{class:'input', value:item, oninput:e=>{
+          const n=[...cl]; n[i]=e.target.value; upd({checklist:n});
+        }}),
+        h('button',{class:'btn danger small', onclick:()=>{
+          const n=[...cl]; n.splice(i,1); upd({checklist:n}); renderEditor();
+        }},'✕')
+      ));
+    });
+    body.appendChild(h('button',{class:'btn ghost small', onclick:()=>upd({checklist:[...cl,'Nieuwe eis…']})},'+ Eis toevoegen'));
+    body.appendChild(h('button',{class:'btn ghost small', style:{marginLeft:'8px'},
+      onclick:()=>upd({checklist: defaultBPChecklist(act.variant||'mutatie')})},'↺ Standaard-eisen herstellen'));
+
+    /* ---------- LIVE FEED TOGGLE ---------- */
+    const feedOn = !!act.feedPublic;
+    const toggle = h('label',{class:'bp-toggle '+(feedOn?'on':'off'), title:'Bepaal of studenten elkaars ingeleverde teksten in de livefeed zien'},
+      h('input',{type:'checkbox', checked:feedOn, onchange:e=>{
+        upd({feedPublic: e.target.checked});
+        renderEditor();
+      }}),
+      h('div',{class:'lbl'},
+        h('strong',{}, feedOn ? '📡 Live feed AAN' : '🔒 Live feed UIT'),
+        h('small',{}, feedOn
+          ? 'Studenten zien elkaars ingeleverde teksten in real-time'
+          : 'Alleen jij (docent) ziet de volledige teksten — studenten zien enkel namen')
+      )
+    );
+    body.appendChild(toggle);
+
+    /* ---------- INZENDINGEN BEKIJKEN ---------- */
+    body.appendChild(h('div',{style:{marginTop:'12px'}},
+      h('button',{class:'btn small', onclick:()=>openSubmissionsModal(tid, act)}, '📥 Bekijk inzendingen van studenten')
+    ));
+  }
   else if(act.type==='drag'){
     const items = act.items||[];
     body.append(
@@ -978,7 +1130,6 @@ function renderActivityEditor(act, idx, tid, themeSubjects=[]){
             const cur = (state.themes[tid].activities[idx].vehicles)||[];
             const n = cur.includes(k) ? cur.filter(x=>x!==k) : [...cur,k];
             upd({vehicles:n});
-            // Update tile state visueel
             tile.classList.toggle('active');
           }});
         grid.appendChild(tile);
@@ -995,6 +1146,68 @@ function renderActivityEditor(act, idx, tid, themeSubjects=[]){
   }
   card.appendChild(body);
   return card;
+}
+
+/* ================= DOCENT: INZENDINGEN MODAL ================= */
+function openSubmissionsModal(tid, act){
+  let unsub = ()=>{};
+  const overlay = h('div',{style:{
+    position:'fixed',inset:'0',background:'rgba(0,0,0,.72)',zIndex:9999,
+    display:'flex',alignItems:'center',justifyContent:'center',padding:'20px'
+  }});
+  const modal = h('div',{style:{
+    background:'var(--card)',border:'1px solid var(--border)',borderRadius:'16px',
+    maxWidth:'900px',width:'100%',maxHeight:'85vh',overflow:'auto',padding:'24px',
+    position:'relative',boxShadow:'0 30px 60px rgba(0,0,0,.6)'
+  }});
+  const close = ()=>{ try{unsub();}catch(e){} overlay.remove(); };
+  modal.appendChild(h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'16px',gap:'10px',flexWrap:'wrap'}},
+    h('h3',{style:{margin:0}},'📥 Inzendingen – '+(act.title||'Beroepsproduct')),
+    h('button',{class:'btn ghost small', onclick:close},'✕ Sluiten')
+  ));
+  const list = h('div');
+  modal.appendChild(list);
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', e=>{ if(e.target===overlay) close(); });
+  document.body.appendChild(overlay);
+
+  const subsRef = ref(db,`responses/${tid}/${act.id}/submissions`);
+  unsub = onValue(subsRef, snap=>{
+    const data = snap.val()||{};
+    const arr = Object.entries(data)
+      .map(([k,v])=>({...v, uid:k}))
+      .filter(x=>x && x.text)
+      .sort((a,b)=>(b.ts||0)-(a.ts||0));
+    list.innerHTML='';
+    if(!arr.length){
+      list.appendChild(h('p',{style:{color:'var(--muted)'}},'Nog geen inzendingen.'));
+      return;
+    }
+    arr.forEach(s=>{
+      const sub = h('div',{style:{
+        background:'var(--card2)',border:'1px solid var(--border)',
+        borderRadius:'12px',padding:'14px',marginBottom:'10px'
+      }});
+      const vinfo = BP_VARIANTS[s.variant] || {label:s.variant||'—', badge:'mutatie'};
+      sub.appendChild(h('div',{style:{display:'flex',gap:'10px',alignItems:'center',marginBottom:'8px',flexWrap:'wrap'}},
+        h('span',{class:'bp-variant '+vinfo.badge}, vinfo.label),
+        h('strong',{}, s.name||'?'),
+        s.klass && h('span',{style:{color:'var(--accent)',fontWeight:'700',fontSize:'12px'}}, s.klass),
+        s.submitted
+          ? h('span',{style:{fontSize:'11px',color:'var(--ok)',fontWeight:'800',letterSpacing:'.5px'}},'✓ INGELEVERD')
+          : h('span',{style:{fontSize:'11px',color:'var(--muted)',fontWeight:'700'}},'concept'),
+        h('span',{style:{marginLeft:'auto',color:'var(--muted)',fontSize:'11px'}},
+          s.ts ? new Date(s.ts).toLocaleString('nl-NL') : '')
+      ));
+      sub.appendChild(h('div',{style:{
+        whiteSpace:'pre-wrap',fontFamily:'ui-monospace,monospace',
+        fontSize:'13px',lineHeight:'1.6',color:'#dbe6f7',
+        maxHeight:'320px',overflow:'auto',padding:'10px',
+        background:'var(--card)',borderRadius:'8px',border:'1px solid var(--border)'
+      }}, s.text));
+      list.appendChild(sub);
+    });
+  });
 }
 
 /* ================= student ================= */
@@ -1041,7 +1254,6 @@ function renderStudent(){
 
   const actsWrap = h('div',{class:'student-acts'});
 
-  // Groepeer per vak
   const activities = t.activities||[];
   const groups = {};
   activities.forEach(a=>{
@@ -1056,7 +1268,6 @@ function renderStudent(){
   });
   if(groups['']) order.push('');
 
-  // Bij één groep tonen we geen headers (schoon beeld bij simpele les)
   const showHeaders = order.length > 1;
 
   order.forEach(subj=>{
@@ -1204,10 +1415,214 @@ function renderStudentActivity(act, tid){
     track(unsub);
     return card;
   }
+  if(act.type==='beroepsproduct') return renderBeroepsproduct(act, tid);
   if(act.type==='drag') return renderDragBoard(act, tid);
   if(act.type==='traffic') return renderTrafficBoard(act, tid);
   if(act.type==='whiteboard') return renderWhiteboard(act, tid);
   return null;
+}
+
+/* ================= BEROEPSPRODUCT (student) ================= */
+function renderBeroepsproduct(act, tid){
+  const card = h('div',{class:'student-act'});
+  const variant = act.variant || 'mutatie';
+  const vinfo = BP_VARIANTS[variant] || {label:variant, badge:'mutatie'};
+  const variantNaam = variant==='mutatie' ? 'mutatie'
+                    : variant==='pv-aangifte' ? 'proces-verbaal van aangifte'
+                    : 'proces-verbaal van bevindingen';
+
+  card.appendChild(h('div',{style:{display:'flex',gap:'10px',alignItems:'center',flexWrap:'wrap',marginBottom:'12px'}},
+    h('h3',{style:{margin:0}},'📋 '+(act.title||'Beroepsproduct')),
+    h('span',{class:'bp-variant '+vinfo.badge}, vinfo.label)
+  ));
+
+  if(act.casus){
+    card.appendChild(h('div',{class:'bp-casus'}, act.casus));
+  }
+
+  const wrap = h('div',{class:'bp-wrap'});
+
+  /* ---------- CHECKLIST ---------- */
+  const check = h('div',{class:'bp-checklist'});
+  check.appendChild(h('h4',{},'✅ Checklist – eisen'));
+  const cl = Array.isArray(act.checklist) ? act.checklist : [];
+  if(!cl.length){
+    check.appendChild(h('div',{class:'obj-empty'},'Geen checklist opgegeven.'));
+  }
+
+  const checksRef = ref(db,`responses/${tid}/${act.id}/checks/${state.userId}`);
+  const subRef    = ref(db,`responses/${tid}/${act.id}/submissions/${state.userId}`);
+
+  cl.forEach((item,i)=>{
+    const cb = h('input',{type:'checkbox'});
+    const row = h('label',{class:'bp-check'},
+      cb,
+      h('span',{class:'bullet'},'•'),
+      h('span',{}, item)
+    );
+    cb.addEventListener('change', ()=>update(checksRef, {['c'+i]: cb.checked}));
+    row._cb = cb;
+    check.appendChild(row);
+  });
+
+  const unsubChk = onValue(checksRef, snap=>{
+    const data = snap.val()||{};
+    $$('.bp-check', check).forEach((row,i)=>{
+      const on = !!data['c'+i];
+      row._cb.checked = on;
+      row.classList.toggle('done', on);
+    });
+  });
+  track(unsubChk);
+
+  wrap.appendChild(check);
+
+  /* ---------- EDITOR ---------- */
+  const right = h('div',{class:'bp-editor-area'});
+  const ta = h('textarea',{
+    class:'input bp-textarea',
+    placeholder:'Schrijf hier je '+variantNaam+'…'
+  });
+  const count = h('div',{class:'bp-count'},'0 tekens');
+  const status = h('span',{class:'bp-status'},'');
+  const saveBtn = h('button',{class:'btn primary', onclick:async ()=>{
+    const txt = ta.value;
+    if(!txt.trim()) return toast('Schrijf eerst je stuk','error');
+    await update(subRef, {
+      text: txt, name: state.user.name, klass: state.user.klass,
+      variant, submitted: true, ts: Date.now()
+    });
+    toast('Ingeleverd ✓','success');
+  }},'💾 Inleveren');
+
+  let suppressServerOverwrite = false;
+  ta.addEventListener('input', ()=>{
+    count.textContent = ta.value.length + ' tekens';
+    suppressServerOverwrite = true;
+    clearTimeout(ta._t);
+    ta._t = setTimeout(async ()=>{
+      await update(subRef, {
+        text: ta.value, name: state.user.name, klass: state.user.klass,
+        variant, submitted: false, ts: Date.now()
+      });
+      suppressServerOverwrite = false;
+    }, 900);
+  });
+
+  right.appendChild(ta);
+  right.appendChild(h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',gap:'10px'}},
+    status, count
+  ));
+  right.appendChild(h('div',{style:{display:'flex',gap:'8px',flexWrap:'wrap'}},
+    saveBtn,
+    h('button',{class:'btn ghost small', onclick:()=>{
+      if(confirm('Je ingeleverd werk verwijderen?')) remove(subRef);
+    }},'🗑 Verwijderen')
+  ));
+
+  const unsubSub = onValue(subRef, snap=>{
+    const v = snap.val();
+    if(v && typeof v.text === 'string' && !suppressServerOverwrite && document.activeElement !== ta){
+      ta.value = v.text;
+      count.textContent = ta.value.length + ' tekens';
+    }
+    if(v && v.submitted && v.ts){
+      status.textContent = '✓ Ingeleverd: ' + new Date(v.ts).toLocaleString('nl-NL');
+    } else if(v && v.ts){
+      status.textContent = 'Concept opgeslagen: ' + new Date(v.ts).toLocaleString('nl-NL');
+    } else {
+      status.textContent = '';
+    }
+  });
+  track(unsubSub);
+
+  wrap.appendChild(right);
+  card.appendChild(wrap);
+
+  /* ---------- LIVE FEED (docent bepaalt zichtbaarheid) ---------- */
+  const feedWrap = h('div',{class:'bp-list'});
+  card.appendChild(feedWrap);
+
+  const subsRef = ref(db,`responses/${tid}/${act.id}/submissions`);
+  const actRef  = ref(db,`themes/${tid}/activities`);
+
+  let subsData = {};
+  let isPublic = false;
+  let hasRenderedOnce = false;
+
+  function renderFeed(){
+    feedWrap.innerHTML='';
+
+    const arr = Object.values(subsData)
+      .filter(x=>x && x.submitted)
+      .sort((a,b)=>(b.ts||0)-(a.ts||0));
+
+    if(!isPublic){
+      /* 🔒 Docent heeft feed nog niet vrijgegeven: alleen namen */
+      feedWrap.appendChild(h('div',{class:'bp-feed-head'},
+        h('h4',{},'📥 Ingeleverd door klas '+(state.user.klass||'')),
+        h('span',{style:{fontSize:'11px',color:'var(--muted)',fontWeight:'600'}},'🔒 teksten nog niet vrijgegeven')
+      ));
+      const nameList = h('div',{class:'bp-feed'});
+      if(!arr.length){
+        nameList.appendChild(h('div',{class:'bp-feed-empty'},'Nog niets ingeleverd'));
+      } else {
+        arr.forEach(s=>{
+          nameList.appendChild(h('div',{class:'bp-list-row'},
+            h('span',{class:'nm'}, s.name||'?'),
+            h('span',{class:'kl'}, s.klass||''),
+            h('span',{class:'ts'}, s.ts ? new Date(s.ts).toLocaleString('nl-NL') : '')
+          ));
+        });
+      }
+      feedWrap.appendChild(nameList);
+      return;
+    }
+
+    /* 📡 Feed is vrijgegeven: volledige teksten live */
+    const withText = arr.filter(x=>x.text && x.text.trim());
+    feedWrap.appendChild(h('div',{class:'bp-feed-head'},
+      h('h4',{},'📡 Live feed – ingeleverd door klas '+(state.user.klass||'')),
+      h('span',{style:{fontSize:'11px',color:'var(--ok)',fontWeight:'800'}},'● live')
+    ));
+    const feedList = h('div',{class:'bp-feed'});
+    if(!withText.length){
+      feedList.appendChild(h('div',{class:'bp-feed-empty'},
+        'Nog geen ingeleverd werk — zodra iemand op 💾 Inleveren klikt, verschijnt het hier live.'));
+    } else {
+      withText.forEach(s=>{
+        feedList.appendChild(h('div',{class:'bp-feed-item'},
+          h('div',{class:'who'},
+            h('span',{}, s.name||'?'),
+            s.klass && h('span',{class:'kl'}, s.klass),
+            h('span',{class:'ts'}, s.ts ? new Date(s.ts).toLocaleString('nl-NL') : '')
+          ),
+          h('div',{class:'msg'}, s.text)
+        ));
+      });
+    }
+    feedWrap.appendChild(feedList);
+
+    if(!hasRenderedOnce){
+      hasRenderedOnce = true;
+      toast('📡 De docent heeft de teksten vrijgegeven','success');
+    }
+  }
+
+  const unsubSubs = onValue(subsRef, snap=>{
+    subsData = snap.val()||{};
+    renderFeed();
+  });
+  const unsubAct = onValue(actRef, snap=>{
+    const acts = snap.val()||[];
+    const found = Array.isArray(acts) ? acts.find(x=>x.id===act.id) : null;
+    isPublic = !!(found && found.feedPublic);
+    renderFeed();
+  });
+  track(unsubSubs);
+  track(unsubAct);
+
+  return card;
 }
 
 /* ================= DRAG BOARD ================= */
@@ -1338,7 +1753,6 @@ function renderTrafficBoard(act, tid){
         el.style.left = (it.x*100)+'%';
         el.style.top = (it.y*100)+'%';
       }
-      // Rotatie altijd toepassen (behalve als net door mij wordt gedraaid)
       const inner = el.querySelector('.inner');
       if(!el.classList.contains('rotating')){
         inner.style.transform = `rotate(${(it.rot||0)}deg)`;
@@ -1397,7 +1811,6 @@ function bindRotor(el, inner, key, itemsRef){
     startAngle = Math.atan2(e.clientY-cy, e.clientX-cx) * 180 / Math.PI;
     const cur = (el.dataset.rot ? parseFloat(el.dataset.rot) : 0);
     startRot = cur;
-    // Klik-detectie voor +15° zonder slepen
     clearTimeout(clickTimeout);
   });
 
@@ -1407,7 +1820,6 @@ function bindRotor(el, inner, key, itemsRef){
     const a = Math.atan2(e.clientY-centerY, e.clientX-centerX) * 180 / Math.PI;
     let delta = a - startAngle;
     let newRot = startRot + delta;
-    // Snap op 15° als shift NIET wordt gebruikt en beweging klein is
     if(!e.shiftKey){
       newRot = Math.round(newRot / 15) * 15;
     }
@@ -1421,7 +1833,6 @@ function bindRotor(el, inner, key, itemsRef){
     rotating = false;
     el.classList.remove('rotating');
     if(!dragStarted){
-      // Het was een klik — draai +15° (of -15° met shift)
       const cur = parseFloat(el.dataset.rot || 0);
       const step = e && e.shiftKey ? -15 : 15;
       const newRot = ((cur + step) % 360 + 360) % 360;
