@@ -654,7 +654,227 @@ function renderPushedList(){
     ));
   }
 }
+/* ================= PDF EXPORT ================= */
+function exportThemePDF(tid){
+  const theme = state.themes[tid];
+  if(!theme){ toast('Thema niet gevonden','error'); return; }
 
+  const subjects = getThemeSubjects(theme);
+  const acts = theme.activities || [];
+
+  /* Groepeer per vak, in dezelfde volgorde als de editor */
+  const groups = {};
+  acts.forEach(a=>{
+    const s = a.subject || '';
+    if(!groups[s]) groups[s] = [];
+    groups[s].push(a);
+  });
+  const order = [];
+  subjects.forEach(s=>{ if(groups[s]) order.push(s); });
+  Object.keys(groups).forEach(s=>{
+    if(s && !subjects.includes(s)) order.push(s);
+  });
+  if(groups['']) order.push('');
+
+  /* ---------- HTML HELPERS ---------- */
+  const e = s => String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const nl2br = s => e(s).replace(/\n/g,'<br>');
+  const esc = e;
+
+  function renderActivityForPDF(a){
+    if(a.type==='text'){
+      if(!a.title && !a.body) return '';
+      return `<div class="act">
+        ${a.title?`<h4>${e(a.title)}</h4>`:''}
+        ${a.body?`<p class="body">${nl2br(a.body)}</p>`:''}
+      </div>`;
+    }
+    if(a.type==='image'){
+      if(!a.url) return '';
+      return `<div class="act">
+        <h4>🖼️ Afbeelding${a.caption?' – '+e(a.caption):''}</h4>
+        <div class="url">${e(a.url)}</div>
+      </div>`;
+    }
+    if(a.type==='youtube'){
+      if(!a.url) return '';
+      return `<div class="act">
+        <h4>▶️ Video${a.caption?' – '+e(a.caption):''}</h4>
+        <div class="url">${e(a.url)}</div>
+      </div>`;
+    }
+    if(a.type==='iframe'){
+      if(!a.url) return '';
+      return `<div class="act">
+        <h4>🌐 ${e(a.title||'Website')}</h4>
+        <div class="url">${e(a.url)}</div>
+      </div>`;
+    }
+    if(a.type==='openq'){
+      return `<div class="act">
+        <h4>💬 Open vraag</h4>
+        <p class="q">${nl2br(a.question||'')}</p>
+        ${a.hint?`<p class="hint"><em>Hint: ${e(a.hint)}</em></p>`:''}
+      </div>`;
+    }
+    if(a.type==='quiz'){
+      const qs = a.questions||[];
+      if(!qs.length) return `<div class="act"><h4>🧠 Quiz</h4><p class="hint"><em>Geen vragen.</em></p></div>`;
+      let html = `<div class="act"><h4>🧠 Quiz</h4><ol class="quiz">`;
+      qs.forEach(q=>{
+        html += `<li><div class="q">${nl2br(q.q||'')}</div>`;
+        if(q.qtype==='mc'){
+          html += `<ul class="opts">`;
+          (q.options||[]).forEach((o,oi)=>{
+            const good = (oi===q.correct);
+            html += `<li class="${good?'good':''}">${e(o)}${good?' <strong>✓</strong>':''}</li>`;
+          });
+          html += `</ul>`;
+        } else if(q.qtype==='auto'){
+          html += `<div class="ans"><strong>Antwoord:</strong> ${e(q.answer||'')}</div>`;
+        } else {
+          html += `<div class="ans"><em>Open vraag — mondeling/digitaal te beoordelen.</em></div>`;
+        }
+        html += `</li>`;
+      });
+      html += `</ol></div>`;
+      return html;
+    }
+    if(a.type==='beroepsproduct'){
+      const v = (BP_VARIANTS[a.variant]||{}).label || a.variant || '—';
+      let html = `<div class="act">
+        <h4>📋 Beroepsproduct – ${e(v)}</h4>
+        ${a.title?`<p class="q">${nl2br(a.title)}</p>`:''}
+        ${a.casus?`<div class="casus"><strong>Casus:</strong><br>${nl2br(a.casus)}</div>`:''}`;
+      const cl = Array.isArray(a.checklist) ? a.checklist : [];
+      if(cl.length){
+        html += `<p class="lbl">Checklist-eisen:</p><ul class="cl">`;
+        cl.forEach(c=>{ html += `<li>${e(c)}</li>`; });
+        html += `</ul>`;
+      }
+      html += `</div>`;
+      return html;
+    }
+    if(a.type==='drag'){
+      const items = a.items||[];
+      return `<div class="act">
+        <h4>🖱️ ${e(a.title||'Sleepopdracht')}</h4>
+        ${items.length?`<ul class="cl">${items.map(i=>`<li>${e(i)}</li>`).join('')}</ul>`:''}
+      </div>`;
+    }
+    if(a.type==='whiteboard'){
+      return `<div class="act">
+        <h4>🎨 ${e(a.title||'Samen tekenen')}</h4>
+        <p class="hint"><em>Interactief whiteboard — alleen online beschikbaar.</em></p>
+      </div>`;
+    }
+    if(a.type==='traffic'){
+      const veh = a.vehicles||[];
+      return `<div class="act">
+        <h4>🚦 Verkeerssituatie</h4>
+        ${a.question?`<p class="q">${nl2br(a.question)}</p>`:''}
+        ${veh.length?`<p class="lbl">Beschikbare elementen:</p><div class="chips">${veh.map(v=>`<span class="chipx">${e((VEHICLES[v]||{}).label||v)}</span>`).join('')}</div>`:''}
+      </div>`;
+    }
+    return '';
+  }
+
+  /* ---------- BOUW BODY ---------- */
+  let bodyHtml = '';
+
+  bodyHtml += `<header>
+    <h1>${e(theme.name||'Thema')}</h1>
+    <div class="meta">
+      ${subjects.length?`<span><strong>Vakken:</strong> ${subjects.map(e).join(' · ')}</span>`:''}
+      ${theme.objective?`<span><strong>Doelstelling:</strong> ${e(theme.objective)}</span>`:''}
+      <span><strong>Geëxporteerd:</strong> ${new Date().toLocaleString('nl-NL')}</span>
+    </div>
+  </header>`;
+
+  if(theme.description){
+    bodyHtml += `<section class="desc">
+      <h2>Beschrijving van het thema</h2>
+      <p>${nl2br(theme.description)}</p>
+    </section>`;
+  }
+
+  if(!order.length){
+    bodyHtml += `<section><p><em>Dit thema bevat nog geen activiteiten.</em></p></section>`;
+  }
+
+  order.forEach(subj=>{
+    const title = subj ? subj : 'Algemeen (geen vak)';
+    bodyHtml += `<section>
+      <h2 class="subj">${e(title)} <span class="cnt">${groups[subj].length} onderdeel${groups[subj].length===1?'':'en'}</span></h2>`;
+    groups[subj].forEach(a=>{
+      const block = renderActivityForPDF(a);
+      if(block) bodyHtml += block;
+    });
+    bodyHtml += `</section>`;
+  });
+
+  /* ---------- VOLLEDIGE HTML ---------- */
+  const html = `<!DOCTYPE html>
+<html lang="nl"><head><meta charset="UTF-8">
+<title>${e(theme.name||'Thema')} – overzicht</title>
+<style>
+  @page { size: A4; margin: 16mm 14mm; }
+  *{box-sizing:border-box}
+  body{font-family:'Segoe UI',system-ui,Arial,sans-serif;color:#111;line-height:1.55;padding:0;margin:0;background:#fff}
+  header{border-bottom:3px solid #1e3a8a;padding-bottom:14px;margin-bottom:20px}
+  header h1{margin:0 0 8px;font-size:24pt;color:#1e3a8a;letter-spacing:.3px}
+  header .meta{display:flex;flex-wrap:wrap;gap:6px 22px;font-size:10.5pt;color:#333}
+  header .meta strong{color:#1e3a8a}
+  h2{font-size:14pt;color:#1e3a8a;border-bottom:2px solid #fbbf24;padding-bottom:4px;margin:26px 0 10px;letter-spacing:.3px;page-break-after:avoid}
+  h2 .cnt{float:right;font-size:9pt;color:#666;font-weight:500;padding-top:4px}
+  h2.subj::before{content:'📘 ';margin-right:4px}
+  section{page-break-inside:auto}
+  .act{border:1px solid #ddd;border-left:3px solid #2563eb;border-radius:6px;padding:10px 14px;margin-bottom:10px;page-break-inside:avoid;background:#fafbfc}
+  .act h4{margin:0 0 6px;font-size:11.5pt;color:#1e3a8a;font-weight:700;letter-spacing:.2px}
+  .act p.body{margin:0;font-size:10.5pt;color:#222;white-space:normal}
+  .act .url{font-family:ui-monospace,'Courier New',monospace;font-size:9.5pt;color:#1d4ed8;word-break:break-all;background:#eef2ff;border:1px solid #c7d2fe;border-radius:4px;padding:5px 8px;margin-top:4px}
+  .act p.q{margin:0;font-weight:600;font-size:10.5pt;color:#111}
+  .act p.hint{margin:4px 0 0;font-size:9.5pt;color:#555}
+  .act .lbl{margin:6px 0 2px;font-size:9.5pt;font-weight:700;color:#1e3a8a;text-transform:uppercase;letter-spacing:.4px}
+  .act ol.quiz{padding-left:20px;margin:0}
+  .act ol.quiz > li{margin-bottom:10px;page-break-inside:avoid}
+  .act ol.quiz .q{font-weight:600;font-size:10.5pt;margin-bottom:4px}
+  .act ul.opts{list-style:none;padding-left:14px;margin:4px 0}
+  .act ul.opts li{padding:2px 0;font-size:10.5pt;color:#222}
+  .act ul.opts li.good{color:#047857;font-weight:700}
+  .act .ans{font-size:10pt;color:#047857;background:#ecfdf5;border-left:3px solid #10b981;padding:4px 8px;border-radius:4px;margin-top:4px}
+  .act .casus{background:#fffbeb;border-left:3px solid #fbbf24;border-radius:4px;padding:6px 10px;font-size:10.5pt;color:#333;margin:6px 0}
+  .act ul.cl{padding-left:20px;margin:4px 0 0}
+  .act ul.cl li{font-size:10.5pt;color:#222;margin-bottom:2px}
+  .act .chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
+  .act .chipx{background:#eef2ff;border:1px solid #c7d2fe;border-radius:12px;padding:2px 9px;font-size:9.5pt;color:#1e3a8a;font-weight:600}
+  section .desc p{font-size:10.5pt;color:#222;margin:0}
+  section.desc{background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:12px 16px;margin-bottom:18px}
+  footer{margin-top:34px;padding-top:10px;border-top:1px solid #ddd;font-size:9pt;color:#666;text-align:center}
+  .toolbar{position:fixed;top:14px;right:14px;display:flex;gap:8px;z-index:9999}
+  .toolbar button{font-family:inherit;font-size:12pt;font-weight:600;padding:8px 14px;border:none;border-radius:8px;background:#2563eb;color:#fff;cursor:pointer;box-shadow:0 3px 10px rgba(37,99,235,.35)}
+  .toolbar button.ghost{background:#fff;color:#1e3a8a;border:1px solid #c7d2fe;box-shadow:none}
+  @media print{.toolbar{display:none} body{padding:0}}
+  @media screen{body{padding:24px;max-width:900px;margin:0 auto}}
+</style>
+</head><body>
+<div class="toolbar">
+  <button onclick="window.print()">🖨️ Opslaan als PDF</button>
+  <button class="ghost" onclick="window.close()">✕ Sluiten</button>
+</div>
+${bodyHtml}
+<footer>Themalessen – ${e(theme.name||'Thema')} — samengesteld op ${new Date().toLocaleString('nl-NL')}</footer>
+</body></html>`;
+
+  const w = window.open('', '_blank', 'width=1000,height=800');
+  if(!w){ toast('Sta pop-ups toe om te kunnen exporteren','error'); return; }
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  /* Automatisch de printdialoog openen (opslaan als PDF) */
+  setTimeout(()=>{ try{ w.print(); }catch(e){} }, 400);
+}
 function renderEditor(){
   const ed = $('#editor'); if(!ed) return;
   ed.innerHTML='';
@@ -679,7 +899,8 @@ function renderEditor(){
     h('label',{},'Naam van het thema'),
     h('input',{class:'input big', value:theme.name||'', oninput:e=>update(ref(db,'themes/'+tid),{name:e.target.value, updatedAt:Date.now()})})
   ));
-  head.appendChild(h('div',{style:{display:'flex',gap:'8px',alignItems:'flex-end'}},
+  head.appendChild(h('div',{style:{display:'flex',gap:'8px',alignItems:'flex-end',flexWrap:'wrap'}},
+    h('button',{class:'btn primary small', onclick:()=>exportThemePDF(tid)}, '📄 Export PDF'),
     h('button',{class:'btn danger small', onclick:async()=>{
       if(!confirm('Thema definitief verwijderen?')) return;
       for(const [cls, val] of Object.entries(state.pushes)){
