@@ -376,7 +376,7 @@ function renderLogin(){
     h('p',{class:'subtitle'},'Kies je rol om verder te gaan')
   );
   const tabs = h('div',{class:'tabs'});
-  const tabS = h('button',{class:'tab active'},'👨‍🎓 Leerling');
+  const tabS = h('button',{class:'tab active'},'👨‍🎓 student');
   const tabT = h('button',{class:'tab'},'👮 Docent');
   tabs.append(tabS,tabT); card.appendChild(tabs);
   const body = h('div',{class:'login-body'}); card.appendChild(body);
@@ -403,7 +403,7 @@ function renderLogin(){
       if(!n) return toast('Vul je naam in','error');
       localStorage.setItem('studentName', n);
       localStorage.setItem('studentClass', selectedClass);
-      loginAs({id:state.userId, name:n, role:'leerling', klass:selectedClass});
+      loginAs({id:state.userId, name:n, role:'student', klass:selectedClass});
     }},'Deelnemen aan les'));
   }
   function showTeacher(){
@@ -824,7 +824,7 @@ function renderActivityEditor(act, idx, tid, themeSubjects=[]){
   }
   else if(act.type==='whiteboard'){
     body.appendChild(h('input',{class:'input', placeholder:'Titel', value:act.title||'', oninput:e=>upd({title:e.target.value})}));
-    body.appendChild(h('p',{style:{color:'var(--muted)',fontSize:'13px',marginTop:'8px'}},'Een gedeeld whiteboard waarop alle leerlingen tegelijk kunnen tekenen.'));
+    body.appendChild(h('p',{style:{color:'var(--muted)',fontSize:'13px',marginTop:'8px'}},'Een gedeeld whiteboard waarop alle studenten tegelijk kunnen tekenen.'));
   }
   else if(act.type==='traffic'){
     const veh = act.vehicles||[];
@@ -857,13 +857,13 @@ function renderActivityEditor(act, idx, tid, themeSubjects=[]){
     body.appendChild(tileGroup('🛣️ Wegen', ['road-straight','road-curve-left','road-curve-right'], 'Rechte weg, bochten — klik om aan/uit te zetten.'));
     body.appendChild(tileGroup('🚗 Voertuigen', ['car','truck','bus','bike','ped','light','sign']));
     body.appendChild(tileGroup('🌳 Natuur', ['tree','bush']));
-    body.appendChild(h('div',{class:'ts-hint'},'💡 Leerlingen kunnen elk geplaatst element draaien met de ronde knop boven het element.'));
+    body.appendChild(h('div',{class:'ts-hint'},'💡 studenten kunnen elk geplaatst element draaien met de ronde knop boven het element.'));
   }
   card.appendChild(body);
   return card;
 }
 
-/* ================= LEERLING ================= */
+/* ================= student ================= */
 let studentPushUnsub = null;
 let studentThemeUnsub = null;
 
@@ -872,7 +872,7 @@ function renderStudent(){
   root.innerHTML = '';
   const wrap = h('div',{class:'student-wrap'});
   wrap.appendChild(h('header',{class:'topbar', style:{borderRadius:'16px'}},
-    h('div',{class:'brand'}, h('span',{class:'shield'},'★'),'Themalessen – Leerling'),
+    h('div',{class:'brand'}, h('span',{class:'shield'},'★'),'Themalessen – student'),
     h('div',{class:'user-info'},
       h('span',{},'👨‍🎓 '+state.user.name+' • '+state.user.klass),
       h('button',{class:'btn ghost small', onclick:logout},'Uitloggen')
@@ -943,7 +943,7 @@ function renderStudent(){
   root.appendChild(wrap);
 }
 
-/* ================= ACTIVITY RENDERERS (LEERLING) ================= */
+/* ================= ACTIVITY RENDERERS (student) ================= */
 function renderStudentActivity(act, tid){
   if(act.type==='text'){
     if(!act.title && !act.body) return null;
@@ -1384,7 +1384,7 @@ function setupTeacherListeners(){
   });
 }
 
-/* ================= LEERLING LISTENERS ================= */
+/* ================= student LISTENERS ================= */
 function setupStudentListeners(){
   if(studentPushUnsub){ studentPushUnsub(); studentPushUnsub = null; }
   if(studentThemeUnsub){ studentThemeUnsub(); studentThemeUnsub = null; }
