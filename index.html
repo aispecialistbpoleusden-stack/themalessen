@@ -82,7 +82,7 @@ label{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px;font-wei
 .act-card{background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:16px;transition:.15s;border-left:3px solid var(--primary-2)}
 .act-card:hover{border-color:#3a5c92}
 .act-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-.act-controls{display:flex;gap:6px}
+.act-controls{display:flex;gap:6px;flex-wrap:wrap}
 .badge{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;background:rgba(37,99,235,.22);color:#93c5fd}
 .add-bar{display:flex;flex-wrap:wrap;gap:8px;padding:16px;background:var(--card2);border-radius:14px;border:1px dashed var(--border);margin-top:16px}
 .add-bar .btn{font-size:12px}
@@ -415,7 +415,8 @@ const state = {
   myPushedId: null,
   editingThemeId: null,
   objectives: {},
-  subjects: {}
+  subjects: {},
+  _themesSig: null
 };
 const listeners = [];
 const track = u => { if(typeof u === 'function') listeners.push(u); };
@@ -578,6 +579,7 @@ function logout(){
   state.pushedTheme = null;
   state.myPushedId = null;
   state._lastSig = null;
+  state._themesSig = null;
   localStorage.removeItem('user');
   clearTracked();
   render();
@@ -654,6 +656,7 @@ function renderPushedList(){
     ));
   }
 }
+
 /* ================= PDF EXPORT ================= */
 function exportThemePDF(tid){
   const theme = state.themes[tid];
@@ -662,7 +665,6 @@ function exportThemePDF(tid){
   const subjects = getThemeSubjects(theme);
   const acts = theme.activities || [];
 
-  /* Groepeer per vak, in dezelfde volgorde als de editor */
   const groups = {};
   acts.forEach(a=>{
     const s = a.subject || '';
@@ -676,10 +678,8 @@ function exportThemePDF(tid){
   });
   if(groups['']) order.push('');
 
-  /* ---------- HTML HELPERS ---------- */
   const e = s => String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const nl2br = s => e(s).replace(/\n/g,'<br>');
-  const esc = e;
 
   function renderActivityForPDF(a){
     if(a.type==='text'){
@@ -779,7 +779,6 @@ function exportThemePDF(tid){
     return '';
   }
 
-  /* ---------- BOUW BODY ---------- */
   let bodyHtml = '';
 
   bodyHtml += `<header>
@@ -813,7 +812,6 @@ function exportThemePDF(tid){
     bodyHtml += `</section>`;
   });
 
-  /* ---------- VOLLEDIGE HTML ---------- */
   const html = `<!DOCTYPE html>
 <html lang="nl"><head><meta charset="UTF-8">
 <title>${e(theme.name||'Thema')} – overzicht</title>
@@ -872,9 +870,29 @@ ${bodyHtml}
   w.document.write(html);
   w.document.close();
   w.focus();
-  /* Automatisch de printdialoog openen (opslaan als PDF) */
   setTimeout(()=>{ try{ w.print(); }catch(e){} }, 400);
 }
+
+/* ================= STRUCTUUR-SIGNATUUR =================
+   Voorkomt dat de editor opnieuw wordt opgebouwd bij elke toetsaanslag.
+   Alleen wanneer de structuur van een thema écht verandert (nieuwe/
+   verwijderde/verplaatste activiteit, vak toegevoegd, variant gewijzigd,
+   doelstelling gekoppeld) wordt renderEditor() opnieuw uitgevoerd.
+   Tekst-, naam-, beschrijvings- en checklistwijzigingen laten de DOM
+   met rust zodat de cursor in het invoerveld blijft staan.            */
+function themeStructureSig(themes){
+  if(!themes) return '';
+  return Object.keys(themes).sort().map(tid=>{
+    const t = themes[tid] || {};
+    const subs = (t.subjects||[]).join(',');
+    const obj  = t.objective||'';
+    const acts = (t.activities||[]).map(a=>
+      `${a.id}~${a.type}~${a.subject||''}~${a.variant||''}`
+    ).join('|');
+    return `${tid}::${subs}::${obj}::${acts}`;
+  }).join('||');
+}
+
 function renderEditor(){
   const ed = $('#editor'); if(!ed) return;
   ed.innerHTML='';
@@ -927,7 +945,6 @@ function renderEditor(){
       }},'✕')
     ));
   });
-  // toevoegen-select
   const addSubj = h('select',{class:'subject-select', style:{fontSize:'12px', padding:'6px 10px', minWidth:'180px'}});
   addSubj.appendChild(h('option',{value:''},'➕ Vak toevoegen…'));
   const customSubjects = Object.values(state.subjects||{}).map(s=>s.name).filter(Boolean);
@@ -1182,9 +1199,9 @@ function renderActivityEditor(act, idx, tid, themeSubjects=[]){
       subjSel
     ),
     h('div',{class:'act-controls'},
-      h('button',{class:'btn ghost small', onclick:()=>moveActivity(tid,idx,-1)},'↑'),
-      h('button',{class:'btn ghost small', onclick:()=>moveActivity(tid,idx,1)},'↓'),
-      h('button',{class:'btn danger small', onclick:()=>removeActivity(tid,idx)},'✕')
+      h('button',{class:'btn ghost small', title:'Activiteit omhoog binnen dit vak', onclick:()=>moveActivity(tid,idx,-1)},'⬆️ Omhoog'),
+      h('button',{class:'btn ghost small', title:'Activiteit omlaag binnen dit vak', onclick:()=>moveActivity(tid,idx,1)},'⬇️ Omlaag'),
+      h('button',{class:'btn danger small', title:'Activiteit verwijderen', onclick:()=>removeActivity(tid,idx)},'✕')
     )
   ));
   const body = h('div',{class:'act-body'});
@@ -1779,7 +1796,6 @@ function renderBeroepsproduct(act, tid){
       .sort((a,b)=>(b.ts||0)-(a.ts||0));
 
     if(!isPublic){
-      /* 🔒 Docent heeft feed nog niet vrijgegeven: alleen namen */
       feedWrap.appendChild(h('div',{class:'bp-feed-head'},
         h('h4',{},'📥 Ingeleverd door klas '+(state.user.klass||'')),
         h('span',{style:{fontSize:'11px',color:'var(--muted)',fontWeight:'600'}},'🔒 teksten nog niet vrijgegeven')
@@ -1800,7 +1816,6 @@ function renderBeroepsproduct(act, tid){
       return;
     }
 
-    /* 📡 Feed is vrijgegeven: volledige teksten live */
     const withText = arr.filter(x=>x.text && x.text.trim());
     feedWrap.appendChild(h('div',{class:'bp-feed-head'},
       h('h4',{},'📡 Live feed – ingeleverd door klas '+(state.user.klass||'')),
@@ -1902,14 +1917,12 @@ function renderDragBoard(act, tid){
 
 /* ================= TRAFFIC BOARD ================= */
 const VEHICLES = {
-  /* Wegen */
   'road-straight': {label:'Rechte weg', svg:`<svg viewBox="0 0 100 100"><rect x="25" y="0" width="50" height="100" fill="#3f4550"/><line x1="50" y1="5" x2="50" y2="95" stroke="#fbbf24" stroke-width="3" stroke-dasharray="12 9"/><line x1="27" y1="0" x2="27" y2="100" stroke="#e5e7eb" stroke-width="2"/><line x1="73" y1="0" x2="73" y2="100" stroke="#e5e7eb" stroke-width="2"/></svg>`},
   'road-curve-left': {label:'Bocht links', svg:`<svg viewBox="0 0 100 100"><path d="M 75 0 L 75 35 Q 75 75 35 75 L 0 75" stroke="#3f4550" stroke-width="50" fill="none" stroke-linecap="butt"/><path d="M 75 0 L 75 35 Q 75 75 35 75 L 0 75" stroke="#fbbf24" stroke-width="3" stroke-dasharray="12 9" fill="none"/><path d="M 75 0 L 75 35 Q 75 75 35 75 L 0 75" stroke="#e5e7eb" stroke-width="2" fill="none" transform="translate(24,0)"/><path d="M 75 0 L 75 35 Q 75 75 35 75 L 0 75" stroke="#e5e7eb" stroke-width="2" fill="none" transform="translate(-24,0)"/></svg>`},
   'road-curve-right': {label:'Bocht rechts', svg:`<svg viewBox="0 0 100 100"><path d="M 25 0 L 25 35 Q 25 75 65 75 L 100 75" stroke="#3f4550" stroke-width="50" fill="none" stroke-linecap="butt"/><path d="M 25 0 L 25 35 Q 25 75 65 75 L 100 75" stroke="#fbbf24" stroke-width="3" stroke-dasharray="12 9" fill="none"/><path d="M 25 0 L 25 35 Q 25 75 65 75 L 100 75" stroke="#e5e7eb" stroke-width="2" fill="none" transform="translate(24,0)"/><path d="M 25 0 L 25 35 Q 25 75 65 75 L 100 75" stroke="#e5e7eb" stroke-width="2" fill="none" transform="translate(-24,0)"/></svg>`},
   tree: {label:'Boom', svg:`<svg viewBox="0 0 60 80"><rect x="26" y="55" width="8" height="25" fill="#5b3a1e" rx="2"/><circle cx="30" cy="35" r="22" fill="#15803d"/><circle cx="18" cy="45" r="15" fill="#166534"/><circle cx="42" cy="45" r="15" fill="#166534"/><circle cx="30" cy="25" r="14" fill="#22c55e" opacity=".55"/></svg>`},
   bush: {label:'Struik', svg:`<svg viewBox="0 0 80 50"><ellipse cx="24" cy="35" rx="22" ry="15" fill="#15803d"/><ellipse cx="56" cy="35" rx="22" ry="15" fill="#166534"/><ellipse cx="40" cy="25" rx="20" ry="14" fill="#22c55e"/><ellipse cx="40" cy="20" rx="11" ry="8" fill="#4ade80" opacity=".5"/></svg>`},
 
-  /* Voertuigen */
   car: {label:'Auto', svg:`<svg viewBox="0 0 40 70"><rect x="4" y="4" width="32" height="62" rx="8" fill="#2563eb"/><rect x="9" y="12" width="22" height="14" rx="3" fill="#bfdbfe"/><rect x="9" y="44" width="22" height="14" rx="3" fill="#bfdbfe"/></svg>`},
   truck: {label:'Vrachtwagen', svg:`<svg viewBox="0 0 44 80"><rect x="4" y="4" width="36" height="72" rx="4" fill="#1e3a8a"/><rect x="9" y="10" width="26" height="16" rx="2" fill="#bfdbfe"/></svg>`},
   bus: {label:'Bus', svg:`<svg viewBox="0 0 44 90"><rect x="4" y="4" width="36" height="82" rx="6" fill="#fbbf24"/><rect x="9" y="12" width="26" height="18" fill="#fef3c7"/></svg>`},
@@ -2029,182 +2042,4 @@ function bindRotor(el, inner, key, itemsRef){
     rotor.setPointerCapture(e.pointerId);
     const {cx, cy} = getCenter();
     centerX = cx; centerY = cy;
-    startAngle = Math.atan2(e.clientY-cy, e.clientX-cx) * 180 / Math.PI;
-    const cur = (el.dataset.rot ? parseFloat(el.dataset.rot) : 0);
-    startRot = cur;
-    clearTimeout(clickTimeout);
-  });
-
-  rotor.addEventListener('pointermove', e=>{
-    if(!rotating) return;
-    dragStarted = true;
-    const a = Math.atan2(e.clientY-centerY, e.clientX-centerX) * 180 / Math.PI;
-    let delta = a - startAngle;
-    let newRot = startRot + delta;
-    if(!e.shiftKey){
-      newRot = Math.round(newRot / 15) * 15;
-    }
-    newRot = ((newRot % 360) + 360) % 360;
-    el.dataset.rot = newRot;
-    inner.style.transform = `rotate(${newRot}deg)`;
-  });
-
-  function endRotate(e){
-    if(!rotating) return;
-    rotating = false;
-    el.classList.remove('rotating');
-    if(!dragStarted){
-      const cur = parseFloat(el.dataset.rot || 0);
-      const step = e && e.shiftKey ? -15 : 15;
-      const newRot = ((cur + step) % 360 + 360) % 360;
-      el.dataset.rot = newRot;
-      inner.style.transform = `rotate(${newRot}deg)`;
-      update(itemsRef, {[key+'/rot']: newRot});
-    } else {
-      const cur = parseFloat(el.dataset.rot || 0);
-      update(itemsRef, {[key+'/rot']: cur});
-    }
-  }
-  rotor.addEventListener('pointerup', endRotate);
-  rotor.addEventListener('pointercancel', endRotate);
-}
-
-/* ================= WHITEBOARD ================= */
-function renderWhiteboard(act, tid){
-  const card = h('div',{class:'student-act'});
-  card.appendChild(h('h3',{},'🎨 '+(act.title||'Samen tekenen')));
-  const canvas = h('canvas',{class:'whiteboard'});
-  card.appendChild(canvas);
-  const tools = h('div',{class:'wb-tools'});
-  card.appendChild(tools);
-
-  const colors = ['#111827','#dc2626','#2563eb','#10b981','#fbbf24'];
-  let color = colors[0];
-  colors.forEach((c,i)=>{
-    const dot = h('div',{class:'color-dot'+(i===0?' active':''), style:{background:c}, onclick:()=>{
-      color = c; $$('.color-dot', tools).forEach((d,j)=>d.classList.toggle('active',j===i));
-    }});
-    tools.appendChild(dot);
-  });
-  tools.appendChild(h('button',{class:'btn ghost small', onclick:()=>{
-    if(confirm('Whiteboard wissen voor iedereen?')) remove(ref(db,`responses/${tid}/${act.id}/strokes`));
-  }},'🧽 Wissen'));
-
-  const ctx = canvas.getContext('2d');
-  setTimeout(()=>{
-    canvas.width = canvas.clientWidth || 800;
-    canvas.height = canvas.clientHeight || 450;
-    ctx.fillStyle='#fff'; ctx.fillRect(0,0,canvas.width,canvas.height);
-  },0);
-
-  function draw(s){
-    ctx.strokeStyle = s.color; ctx.lineWidth = s.w*canvas.width; ctx.lineCap='round';
-    ctx.beginPath();
-    ctx.moveTo(s.x1*canvas.width, s.y1*canvas.height);
-    ctx.lineTo(s.x2*canvas.width, s.y2*canvas.height);
-    ctx.stroke();
-  }
-
-  const strokesRef = ref(db,`responses/${tid}/${act.id}/strokes`);
-  const unsub = onChildAdded(strokesRef, snap=>{ draw(snap.val()); });
-  track(unsub);
-
-  let drawing=false, last=null;
-  function pos(e){
-    const r = canvas.getBoundingClientRect();
-    return {x:(e.clientX-r.left)/r.width, y:(e.clientY-r.top)/r.height};
-  }
-  canvas.addEventListener('pointerdown', e=>{ drawing=true; last=pos(e); canvas.setPointerCapture(e.pointerId); });
-  canvas.addEventListener('pointermove', e=>{
-    if(!drawing) return;
-    const p = pos(e);
-    const s = {x1:last.x, y1:last.y, x2:p.x, y2:p.y, color, w:0.005};
-    draw(s); push(strokesRef, s); last = p;
-  });
-  const stop = ()=>drawing=false;
-  canvas.addEventListener('pointerup', stop);
-  canvas.addEventListener('pointercancel', stop);
-  return card;
-}
-
-/* ================= DOCENT LISTENERS ================= */
-function setupTeacherListeners(){
-  onValue(ref(db,'themes'), snap=>{
-    state.themes = snap.val()||{};
-    renderThemeList();
-    renderEditor();
-  });
-  onValue(ref(db,'pushes'), snap=>{
-    state.pushes = snap.val()||{};
-    renderThemeList();
-    renderPushedList();
-    renderEditor();
-  });
-  onValue(ref(db,'objectives'), snap=>{
-    state.objectives = snap.val()||{};
-    renderEditor();
-  });
-  onValue(ref(db,'subjects'), snap=>{
-    state.subjects = snap.val()||{};
-    renderEditor();
-  });
-}
-
-/* ================= student LISTENERS ================= */
-function setupStudentListeners(){
-  if(studentPushUnsub){ studentPushUnsub(); studentPushUnsub = null; }
-  if(studentThemeUnsub){ studentThemeUnsub(); studentThemeUnsub = null; }
-
-  const cls = state.user.klass;
-  studentPushUnsub = onValue(ref(db,'pushes/'+cls), snap=>{
-    const newId = snap.val();
-    if(newId === state.myPushedId) return;
-    state.myPushedId = newId;
-    if(studentThemeUnsub){ studentThemeUnsub(); studentThemeUnsub = null; }
-    if(newId){
-      studentThemeUnsub = onValue(ref(db,'themes/'+newId), s2=>{
-        const newTheme = s2.val();
-        const sig = JSON.stringify(Object.keys(
-          (newTheme?.activities||[]).reduce((a,x)=>(a[x.id]=x.type,a),{})
-        )) + '|' + (newTheme?.name||'') + '|' + (newTheme?.description||'');
-        const prev = state._lastSig;
-        state.pushedTheme = newTheme;
-        if(sig !== prev){
-          state._lastSig = sig;
-          renderStudent();
-        }
-      });
-      toast('🎉 Nieuwe les gestart!','success');
-    } else {
-      state.pushedTheme = null;
-      state._lastSig = null;
-      renderStudent();
-    }
-  });
-}
-
-/* ================= MAIN RENDER ================= */
-function render(){
-  clearTracked();
-  const root = $('#app');
-  root.innerHTML = '';
-  if(!state.user){ root.appendChild(renderLogin()); return; }
-  if(state.user.role==='docent'){
-    root.appendChild(renderTeacher());
-    setupTeacherListeners();
-  } else {
-    renderStudent();
-    setupStudentListeners();
-  }
-}
-
-/* ================= BOOT ================= */
-render();
-window.addEventListener('beforeunload', ()=>{
-  if(state.user && state.user.id){
-    set(ref(db,'users/'+state.user.id+'/online'), false).catch(()=>{});
-  }
-});
-</script>
-</body>
-</html>
+    startAngle = Math.atan2(e.clientY-cy, e.clientX-cx)
