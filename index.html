@@ -158,7 +158,6 @@ label{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px;font-wei
 .palette-item span{font-size:10px;color:var(--muted);text-align:center;line-height:1.2;pointer-events:none}
 .palette-group-title{width:100%;font-size:11px;color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-top:6px}
 .palette-group-title:first-child{margin-top:0}
-
 canvas.whiteboard{width:100%;aspect-ratio:16/9;background:#fff;border-radius:14px;cursor:crosshair;touch-action:none;display:block}
 .wb-tools{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap}
 .color-dot{width:26px;height:26px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:.15s}
@@ -169,6 +168,18 @@ canvas.whiteboard{width:100%;aspect-ratio:16/9;background:#fff;border-radius:14p
 .toast.error{background:var(--danger);border-color:var(--danger);color:#fff}
 .toast.success{background:var(--ok);border-color:var(--ok);color:#fff}
 .toast.info{background:var(--primary-2);border:none;color:#fff}
+
+/* ===== Meerdere vakken per thema ===== */
+.subject-header{display:flex;justify-content:space-between;align-items:center;margin:22px 0 10px;padding:10px 16px;background:linear-gradient(90deg,rgba(251,191,36,.18),transparent);border-left:4px solid var(--accent);border-radius:8px}
+.subject-header h3{font-size:14px;letter-spacing:.5px;color:var(--accent);text-transform:uppercase;font-weight:800}
+.subject-header .subject-count{font-size:11px;color:var(--muted);font-weight:600}
+.subject-select{padding:4px 10px;border-radius:8px;background:rgba(251,191,36,.12);color:var(--accent);border:1px solid rgba(251,191,36,.35);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;cursor:pointer;outline:none;font-family:inherit}
+.subject-select option{background:var(--card2);color:var(--text);text-transform:none;font-weight:500}
+.subjects-manager{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px;background:var(--card2);border-radius:12px;border:1px dashed var(--border);margin-top:6px;margin-bottom:10px}
+.subject-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(251,191,36,.15);color:var(--accent);border:1px solid rgba(251,191,36,.35);border-radius:20px;font-size:12px;font-weight:700}
+.subject-chip .remove{background:transparent;border:none;color:var(--accent);cursor:pointer;font-size:14px;padding:0 2px;opacity:.7;line-height:1}
+.subject-chip .remove:hover{opacity:1;color:var(--danger)}
+.hero .chip.subject{background:rgba(251,191,36,.18);color:var(--accent);border-color:rgba(251,191,36,.4)}
 
 @media(max-width:800px){
   .main-grid{grid-template-columns:1fr}
@@ -206,6 +217,39 @@ const DEFAULT_SUBJECTS = [
   'Engels',
   'Eerste Hulp door Politie'
 ];
+
+/* ================= VAKKEN PER THEMA ================= */
+function getThemeSubjects(theme){
+  if(!theme) return [];
+  const out = [];
+  if(theme.subject) out.push(theme.subject);
+  (theme.subjects||[]).forEach(s=>{ if(s && !out.includes(s)) out.push(s); });
+  return out;
+}
+async function addSubjectToTheme(tid, name){
+  if(!name || !name.trim()) return;
+  const theme = state.themes[tid]; if(!theme) return;
+  const cur = getThemeSubjects(theme);
+  const nm = name.trim();
+  if(cur.includes(nm)) return;
+  const newSubs = [...cur, nm];
+  await update(ref(db,'themes/'+tid), {
+    subjects: newSubs,
+    subject: '',        // migreer legacy veld
+    updatedAt: Date.now()
+  });
+}
+async function removeSubjectFromTheme(tid, name){
+  const theme = state.themes[tid]; if(!theme) return;
+  const newSubs = getThemeSubjects(theme).filter(s=>s!==name);
+  const acts = (theme.activities||[]).map(a => a.subject===name ? {...a, subject:''} : a);
+  await update(ref(db,'themes/'+tid), {
+    subjects: newSubs,
+    subject: '',
+    activities: acts,
+    updatedAt: Date.now()
+  });
+}
 
 /* ================= UTIL ================= */
 const $  = (s,r=document)=>r.querySelector(s);
@@ -260,6 +304,7 @@ async function createNewTheme(){
     await set(ref(db,'themes/'+id), {
       name: name.trim(),
       subject: '',
+      subjects: [],
       description: '',
       objective: '',
       activities: [],
@@ -284,7 +329,14 @@ function updateActivity(themeId, idx, patch){
 }
 function moveActivity(themeId, idx, dir){
   const acts = [...(state.themes[themeId].activities||[])];
-  const j = idx+dir; if(j<0||j>=acts.length) return;
+  const cur = acts[idx]; if(!cur) return;
+  const curSub = cur.subject || '';
+  let j = idx + dir;
+  while(j >= 0 && j < acts.length){
+    if((acts[j].subject||'') === curSub) break;
+    j += dir;
+  }
+  if(j < 0 || j >= acts.length) return;
   [acts[idx],acts[j]]=[acts[j],acts[idx]];
   update(ref(db,'themes/'+themeId),{activities:acts, updatedAt:Date.now()});
   renderEditor();
@@ -296,8 +348,8 @@ function removeActivity(themeId, idx){
   update(ref(db,'themes/'+themeId),{activities:acts, updatedAt:Date.now()});
   renderEditor();
 }
-function addActivity(themeId, type){
-  const base = {id:uid(), type, order:Date.now()};
+function addActivity(themeId, type, subject=''){
+  const base = {id:uid(), type, order:Date.now(), subject};
   if(type==='text'){ base.title=''; base.body=''; }
   if(type==='image'){ base.url=''; base.caption=''; }
   if(type==='youtube'){ base.url=''; base.caption=''; }
@@ -439,7 +491,11 @@ function renderThemeList(){
         h('span',{}, t.name||'Naamloos thema'),
         pushedTo.length ? h('span',{class:'push-badge'}, '● '+pushedTo.length) : null
       ),
-      h('div',{class:'sub'}, (t.subject||'Geen vak') + ' • ' + ((t.activities||[]).length) + ' activiteiten' + (pushedTo.length? ' • '+pushedTo.join(', ') : ''))
+      h('div',{class:'sub'},
+        (getThemeSubjects(t).join(' · ') || 'Geen vakken') +
+        ' • ' + ((t.activities||[]).length) + ' activiteiten' +
+        (pushedTo.length? ' • '+pushedTo.join(', ') : '')
+      )
     );
     list.appendChild(item);
   }
@@ -482,7 +538,9 @@ function renderEditor(){
     return;
   }
   const theme = state.themes[tid];
+  const themeSubjects = getThemeSubjects(theme);
 
+  /* ---------- KOP + VERWIJDEREN ---------- */
   const head = h('div',{class:'editor-header'});
   head.appendChild(h('div',{style:{flex:'1', minWidth:'260px'}},
     h('label',{},'Naam van het thema'),
@@ -500,31 +558,47 @@ function renderEditor(){
   ));
   ed.appendChild(head);
 
-  /* ---------- VAKGEBIED (dropdown) ---------- */
-  ed.appendChild(h('label',{},'Vakgebied'));
-  const subSelect = h('select',{class:'input', onchange:async e=>{
-    if(e.target.value==='__new'){
-      const v = prompt('Naam van het nieuwe vak:');
-      if(v && v.trim()){
-        await update(ref(db,'subjects/'+uid()), {name:v.trim()});
-        await update(ref(db,'themes/'+tid), {subject:v.trim(), updatedAt:Date.now()});
-      }
-      return;
-    }
-    update(ref(db,'themes/'+tid),{subject:e.target.value, updatedAt:Date.now()});
-  }});
-  subSelect.appendChild(h('option',{value:''},'— Kies een vakgebied —'));
-  const customSubjects = Object.values(state.subjects||{}).map(s=>s.name).filter(Boolean);
-  const allSubjects = [...new Set([...DEFAULT_SUBJECTS, ...customSubjects, theme.subject].filter(Boolean))].sort((a,b)=>a.localeCompare(b,'nl'));
-  for(const s of allSubjects){
-    const opt = h('option',{value:s},s);
-    if(s===theme.subject) opt.selected=true;
-    subSelect.appendChild(opt);
+  /* ---------- VAKGEBIEDEN (meerdere) ---------- */
+  ed.appendChild(h('label',{},'Vakgebieden (meerdere mogelijk)'));
+  const manager = h('div',{class:'subjects-manager'});
+  if(!themeSubjects.length){
+    manager.appendChild(h('span',{style:{color:'var(--muted)',fontSize:'13px'}},'Nog geen vakken — voeg hieronder toe'));
   }
-  subSelect.appendChild(h('option',{value:'__new'},'➕ Nieuw vak toevoegen…'));
-  ed.appendChild(subSelect);
+  themeSubjects.forEach(s=>{
+    manager.appendChild(h('span',{class:'subject-chip'},
+      s,
+      h('button',{class:'remove', title:'Vak verwijderen van thema', onclick:()=>{
+        if(!confirm('Vak "'+s+'" van dit thema verwijderen? Activiteiten van dit vak worden op "Algemeen" gezet.')) return;
+        removeSubjectFromTheme(tid, s);
+      }},'✕')
+    ));
+  });
+  // toevoegen-select
+  const addSubj = h('select',{class:'subject-select', style:{fontSize:'12px', padding:'6px 10px', minWidth:'180px'}});
+  addSubj.appendChild(h('option',{value:''},'➕ Vak toevoegen…'));
+  const customSubjects = Object.values(state.subjects||{}).map(s=>s.name).filter(Boolean);
+  const allSubjects = [...new Set([...DEFAULT_SUBJECTS, ...customSubjects])].sort((a,b)=>a.localeCompare(b,'nl'));
+  allSubjects.forEach(s=>{
+    if(!themeSubjects.includes(s)) addSubj.appendChild(h('option',{value:s},s));
+  });
+  addSubj.appendChild(h('option',{value:'__new'},'➕ Nieuw vak…'));
+  addSubj.onchange = async e=>{
+    const v = e.target.value; if(!v) return;
+    if(v==='__new'){
+      const n = prompt('Naam van het nieuwe vak:');
+      if(n && n.trim()){
+        await update(ref(db,'subjects/'+uid()), {name:n.trim()});
+        await addSubjectToTheme(tid, n.trim());
+      }
+    } else {
+      await addSubjectToTheme(tid, v);
+    }
+    e.target.value='';
+  };
+  manager.appendChild(addSubj);
+  ed.appendChild(manager);
 
-  /* ---------- DOELSTELLING (dropdown) ---------- */
+  /* ---------- DOELSTELLING ---------- */
   ed.appendChild(h('label',{},'Doelstelling'));
   const objSelect = h('select',{class:'input', onchange:async e=>{
     if(e.target.value==='__new'){
@@ -548,9 +622,11 @@ function renderEditor(){
   objSelect.appendChild(h('option',{value:'__new'},'➕ Nieuwe doelstelling toevoegen…'));
   ed.appendChild(objSelect);
 
+  /* ---------- BESCHRIJVING ---------- */
   ed.appendChild(h('label',{},'Beschrijving van het thema'));
   ed.appendChild(h('textarea',{class:'input', rows:4, placeholder:'Waar gaat dit thema over?', oninput:e=>update(ref(db,'themes/'+tid),{description:e.target.value, updatedAt:Date.now()})}, theme.description||''));
 
+  /* ---------- PUSH-BALK ---------- */
   const pushBar = h('div',{class:'push-bar'});
   pushBar.appendChild(h('strong',{style:{fontSize:'13px',color:'var(--accent)'}},'🚀 Push naar:'));
   const sel = h('select',{class:'input', style:{maxWidth:'200px'}});
@@ -580,27 +656,87 @@ function renderEditor(){
   }
   ed.appendChild(pushBar);
 
-  const list = h('div',{class:'act-list'});
-  (theme.activities||[]).forEach((a,i)=>list.appendChild(renderActivityEditor(a,i,tid)));
-  ed.appendChild(list);
+  /* ---------- ACTIVITEITEN GEGROEPEERD PER VAK ---------- */
+  const activities = theme.activities||[];
+  const groups = {};
+  activities.forEach((a,i)=>{
+    const s = a.subject || '';
+    if(!groups[s]) groups[s] = [];
+    groups[s].push({a, i});
+  });
+  const orderedSubjects = [];
+  themeSubjects.forEach(s=>{ if(groups[s]) orderedSubjects.push(s); });
+  Object.keys(groups).forEach(s=>{
+    if(s && !themeSubjects.includes(s)) orderedSubjects.push(s);
+  });
+  if(groups['']) orderedSubjects.push('');
 
+  if(!orderedSubjects.length){
+    ed.appendChild(h('div',{class:'empty-state', style:{minHeight:'180px', marginTop:'16px'}},
+      h('div',{style:{fontSize:'38px'}},'📚'),
+      h('p',{},'Nog geen activiteiten. Voeg hieronder je eerste activiteit toe en kies aan welk vak die hoort.')
+    ));
+  }
+
+  orderedSubjects.forEach(subj=>{
+    ed.appendChild(h('div',{class:'subject-header'},
+      h('h3',{}, subj ? '📘 '+subj : '⚪ Algemeen (geen vak)'),
+      h('span',{class:'subject-count'}, groups[subj].length + ' item' + (groups[subj].length===1?'':'s'))
+    ));
+    const list = h('div',{class:'act-list'});
+    groups[subj].forEach(({a, i})=>{
+      list.appendChild(renderActivityEditor(a, i, tid, themeSubjects));
+    });
+    ed.appendChild(list);
+  });
+
+  /* ---------- ADD-BAR MET VAK-SELECTOR ---------- */
   const addBar = h('div',{class:'add-bar'});
+  addBar.appendChild(h('div',{style:{width:'100%', fontSize:'11px', color:'var(--accent)', fontWeight:'700', textTransform:'uppercase', letterSpacing:'.5px'}},
+    'Nieuwe activiteit toevoegen aan:'
+  ));
+  let addSubject = themeSubjects[0] || '';
+  const addSubjSel = h('select',{class:'subject-select', style:{fontSize:'12px', padding:'6px 10px', minWidth:'200px'}});
+  addSubjSel.appendChild(h('option',{value:''},'⚪ Algemeen (geen vak)'));
+  themeSubjects.forEach(s=>{
+    const o = h('option',{value:s},'📘 '+s);
+    if(s===addSubject) o.selected=true;
+    addSubjSel.appendChild(o);
+  });
+  addSubjSel.onchange = e=>{ addSubject = e.target.value; };
+  addBar.appendChild(addSubjSel);
+
   const types = [
     ['text','📝 Tekst'],['image','🖼️ Afbeelding'],['youtube','▶️ YouTube'],
     ['iframe','🌐 Website'],['openq','💬 Open vraag'],['quiz','🧠 Quiz'],
     ['drag','🖱️ Sleepopdracht'],['whiteboard','🎨 Whiteboard'],['traffic','🚦 Verkeerssituatie']
   ];
-  for(const [t,l] of types) addBar.appendChild(h('button',{class:'btn small', onclick:()=>addActivity(tid,t)}, l));
+  for(const [t,l] of types){
+    addBar.appendChild(h('button',{class:'btn small', onclick:()=>addActivity(tid,t,addSubject)}, l));
+  }
   ed.appendChild(addBar);
 }
 
 /* ================= ACTIVITY EDITORS ================= */
 const TYPE_LABELS = {text:'Tekst', image:'Afbeelding', youtube:'YouTube', iframe:'Website', openq:'Open vraag', quiz:'Quiz', drag:'Sleepopdracht', whiteboard:'Whiteboard', traffic:'Verkeerssituatie'};
 
-function renderActivityEditor(act, idx, tid){
+function renderActivityEditor(act, idx, tid, themeSubjects=[]){
   const card = h('div',{class:'act-card'});
+
+  const subjSel = h('select',{class:'subject-select', title:'Vak van deze activiteit',
+    onchange:e=>updateActivity(tid, idx, {subject:e.target.value})});
+  subjSel.appendChild(h('option',{value:''},'— Algemeen —'));
+  themeSubjects.forEach(s=>{
+    const o = h('option',{value:s},s);
+    if(s === (act.subject||'')) o.selected = true;
+    subjSel.appendChild(o);
+  });
+
   card.appendChild(h('div',{class:'act-header'},
-    h('span',{class:'badge'}, TYPE_LABELS[act.type]||act.type),
+    h('div',{style:{display:'flex',gap:'8px',alignItems:'center',flexWrap:'wrap'}},
+      h('span',{class:'badge'}, TYPE_LABELS[act.type]||act.type),
+      subjSel
+    ),
     h('div',{class:'act-controls'},
       h('button',{class:'btn ghost small', onclick:()=>moveActivity(tid,idx,-1)},'↑'),
       h('button',{class:'btn ghost small', onclick:()=>moveActivity(tid,idx,1)},'↓'),
@@ -756,11 +892,13 @@ function renderStudent(){
   }
 
   const t = state.pushedTheme;
+  const themeSubjects = getThemeSubjects(t);
+
   const hero = h('div',{class:'hero'},
     h('h1',{}, t.name||'Thema'),
     h('div',{class:'meta'},
       h('span',{class:'chip class'},'🏫 '+state.user.klass),
-      t.subject && h('span',{class:'chip'},'📘 '+t.subject),
+      ...themeSubjects.map(s=>h('span',{class:'chip subject'},'📘 '+s)),
       t.objective && h('span',{class:'chip objective'},'🎯 '+t.objective)
     )
   );
@@ -768,10 +906,39 @@ function renderStudent(){
   wrap.appendChild(hero);
 
   const actsWrap = h('div',{class:'student-acts'});
-  (t.activities||[]).forEach((a)=>{
-    const node = renderStudentActivity(a, state.myPushedId);
-    if(node) actsWrap.appendChild(node);
+
+  // Groepeer per vak
+  const activities = t.activities||[];
+  const groups = {};
+  activities.forEach(a=>{
+    const s = a.subject || '';
+    if(!groups[s]) groups[s] = [];
+    groups[s].push(a);
   });
+  const order = [];
+  themeSubjects.forEach(s=>{ if(groups[s]) order.push(s); });
+  Object.keys(groups).forEach(s=>{
+    if(s && !themeSubjects.includes(s)) order.push(s);
+  });
+  if(groups['']) order.push('');
+
+  // Bij één groep tonen we geen headers (schoon beeld bij simpele les)
+  const showHeaders = order.length > 1;
+
+  order.forEach(subj=>{
+    const acts = groups[subj];
+    if(showHeaders){
+      actsWrap.appendChild(h('div',{class:'subject-header'},
+        h('h3',{}, subj ? '📘 '+subj : '⚪ Algemeen'),
+        h('span',{class:'subject-count'}, acts.length + ' onderdeel' + (acts.length===1?'':'en'))
+      ));
+    }
+    acts.forEach(a=>{
+      const node = renderStudentActivity(a, state.myPushedId);
+      if(node) actsWrap.appendChild(node);
+    });
+  });
+
   wrap.appendChild(actsWrap);
   root.appendChild(wrap);
 }
